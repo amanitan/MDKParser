@@ -1,0 +1,11 @@
+*.pdb
+*.obj
+*.exp
+*.log
+*.tlog
+*.sdf
+*.suo
+*.user
+.vs/
+/Win32/
+/x64/
