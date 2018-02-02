@@ -175,9 +175,13 @@
   <ItemGroup>
     <ClCompile Include="..\tp_stub.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="tjsLex.cpp" />
+    <ClCompile Include="tjsScriptBlock.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\tp_stub.h" />
+    <ClInclude Include="tjsLex.h" />
+    <ClInclude Include="tjsScriptBlock.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
