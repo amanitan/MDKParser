@@ -1103,6 +1103,19 @@ tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(tTJSScriptBlock *block,
 	BareWord = false;
 	PutValue(tTJSVariant());
 }
+
+static tjs_int TJSParseInteger( const tjs_char **ptr ) {
+	tjs_int v = 0;
+	tjs_int c = 0;
+	while( (c == TJSDecNum(**ptr)) > 0 ) {
+		v *= 10;
+		v += c;
+		if(!TJSNext(ptr)) break;
+	}
+	return v;
+}
+
+
 //---------------------------------------------------------------------------
 tTJSLexicalAnalyzer::~tTJSLexicalAnalyzer()
 {
@@ -1119,6 +1132,107 @@ tTJSLexicalAnalyzer::~tTJSLexicalAnalyzer()
 	if(TJSStringMatch(&Current, TJS_W(word), false)) { n=PutValue(val); return (code); }
 #define TJS_1CHAR(code) \
 	TJSNext(&Current); return (code)
+
+
+/**
+ * 行頭トークンを取得する
+ */
+tjs_int LexicalAnalyzer::GetFirstToken(tjs_int &n) {
+	if(*Current == 0) return Token::EOL;
+
+	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
+
+	switch(*Current)
+	{
+	case TJS_W('>'):
+		TJS_MATCH_S(">>>", Token::BEGIN_TRANS);
+		TJS_1CHAR(Token::NEXT_SCENARIO);
+
+	case TJS_W('@'):
+		TJS_1CHAR(Token::AT);
+
+	case TJS_W('#'):
+		TJS_1CHAR(Token::LABEL);
+
+	case TJS_W('0'):
+	case TJS_W('1'):
+	case TJS_W('2'):
+	case TJS_W('3'):
+	case TJS_W('4'):
+	case TJS_W('5'):
+	case TJS_W('6'):
+	case TJS_W('7'):
+	case TJS_W('8'):
+	case TJS_W('9'): {	// number
+		const tjs_char* num = Current;
+		tjs_int val = TJSParseInteger( &num );
+		if( (*num) == TJS_W(".") ) {
+			n = val;
+			num++;
+			Current = num;
+			return Token::SELECT
+		} else {
+			// 選択肢ではない通常の文字列
+			block_->WarningLog( TJS_W("行頭に数値が用いられましたが、'.'がないため選択肢として解釈されませんでした。") );
+			return GetTextToken(n);
+		}
+	}
+	default:
+		return GetTextToken(n);
+	}
+}
+tjs_int tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
+	tTJSVariant variant( ttstr( &Script[PrevPos], (tjs_int)(Current - Script) ) );
+	n = PutValue( variant );
+	return Token::TEXT;
+}
+/**
+ * 通常文をパースする
+ */
+tjs_int tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
+	if(*Current == 0) return Token::EOL;
+
+	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
+	const tjs_char* start = Current;
+
+	while( true ) {
+		switch(*Current) {
+		case 0: // end of text
+			return ReturnText( n );
+
+		case TJS_W('['):
+			if( start != Current ) return ReturnText( n );
+			Current++;
+			return Token::BEGIN_TAG;
+
+		case TJS_W('/'): {
+			if( Current[1] == TJS_W('/') ) {
+				if( start != Current ) return ReturnText( n );
+				TJSSkipComment(&Current);
+				return Token::LINE_COMMENTS;
+			}
+			break;
+		}
+		case TJS_W('|'):
+			if( start != Current ) return ReturnText( n );
+			Current++;
+			return Token::VERTLINE;
+
+		case TJS_W('>'):
+			if( start != Current ) return ReturnText( n );
+			Current++;
+			return Token::WAIT_RETURN;
+		}
+		Current++;
+	}
+	// ここには来ないはず
+	return Token::EOL;
+}
+/**
+ * ルビか文字装飾を行う中間部分
+ */
+tjs_int tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
+}
 tjs_int tTJSLexicalAnalyzer::GetToken(tjs_int &n)
 {
 	// returns token, pointed by 'Current'

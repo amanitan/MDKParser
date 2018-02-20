@@ -133,7 +133,25 @@ enum yytokentype {
      T_CONSTVAL = 385,
      T_SYMBOL = 386,
      T_REGEXP = 387,
-     T_VARIANT = 388
+     T_VARIANT = 388,
    };
+
+enum class Token : int {
+	EOL = 0,
+	NEXT_SCENARIO,	// >
+	BEGIN_TRANS,	// >>>
+	END_TRANS,		// <<<
+	AT,				// @
+	LINE_COMMENTS,	// //
+	SELECT,			// [0-9]+\.
+	LABEL,			// #
+
+	BEGIN_TAG,		// [
+	TEXT,			// normal text
+	VERTLINE,		// |
+	WAIT_RETURN,	// >
+};
+
+
 
 #endif

@@ -197,6 +197,67 @@ void tTJSScriptBlock::Parse(const tjs_char *script, bool isexpr, bool resultneed
 	}
 }
 //---------------------------------------------------------------------------
+void tTJSScriptBlock::WarningLog( const tjs_char* message ) {
+	tjs_int line = CurrentLine;
+	if( Name ) {
+		TVPAddLog( ttstr(TJS_W("warning: ")) + Name + TJS_W("(") + ttstr(line) + TJS_W(")") );
+	} else {
+		tjs_char ptr[128];
+		TJS_snprintf(ptr, sizeof(ptr)/sizeof(tjs_char), TJS_W("0x%p"), this);
+		ttstr name = ttstr(TJS_W("anonymous@")) + ptr;
+		TVPAddLog( ttstr(TJS_W("warning: ")) + name + TJS_W("(") + ttstr(line) + TJS_W(")") );
+	}
+}
+//---------------------------------------------------------------------------
+/**
+ * 返却するデータ形式
+ * 文字列は文字列型でそのまま、記号については記号番号を、タグや属性は辞書型で
+ * Array型に1行ずつ格納する
+ * 各行もArray型で続く
+ *
+ * 文字列はそのまま文字列として
+ * 数値型の時は、意味を
+ * タグや属性は辞書型で
+ */
+void tTJSScriptBlock::ParseLine( tjs_int line ) {
+	if( line < LineVector.size() ) {
+		tjs_int length;
+		const tjs_char *str = GetLine( line, &length );
+		if( length == 0 ) {
+			// 改行のみ
+		} else {
+			LexicalAnalyzer.reset( str, length );
+			tjs_int value;
+			tjs_int token = LexicalAnalyzer.GetFirstToken( value );
+
+			// first token
+			switch( token ) {
+			case T_BEGIN_TRANS:	// >>> 
+				// トランジション開始以降の文字列は無視
+				break;
+			case T_END_TRANS:	// <<<
+				ParseAttribute();
+				break;
+			case T_AT:	// @
+				ParseCharacter();
+				break;
+			case T_SHARP:	// # タグ
+				ParseLabel();
+				break;
+			case T_SELECT:	// [0-9]+\.
+				// value : select number.
+				ParseSelect();
+				break;
+			case T_NEXT_SCENARIO:	// >
+				ParseNextScenario();
+				break;
+			}
+			
+			// T_LINE_COMMENTS	// // comment
+		}
+	}
+}
+//---------------------------------------------------------------------------
 void tTJSScriptBlock::SetFirstError(const tjs_char *error, tjs_int pos)
 {
 	if(CompileErrorCount == 0)

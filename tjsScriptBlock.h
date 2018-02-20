@@ -65,6 +65,7 @@ public:
 	const tjs_char *GetScript() const { return Script; }
 
 	void Parse(const tjs_char *script, bool isexpr, bool resultneeded);
+	void ParseLine( tjs_int line );
 
 	void SetFirstError(const tjs_char *error, tjs_int pos);
 
@@ -75,6 +76,8 @@ public:
 	ttstr GetNameInfo() const;
 
 	tjs_int GetLineOffset() const { return LineOffset; }
+
+	void WarningLog( const tjs_char* message );
 
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
