@@ -41,6 +41,7 @@ private:
 	tjs_char *Script;
 	tjs_char *Name;
 	tjs_int LineOffset;
+	bool HasSelectLine = false;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
 
@@ -81,6 +82,8 @@ public:
 
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
+
+	void PushValueCurrentLine( const tTJSVariant& val );
 
 public:
 	void SetText(tTJSVariant *result, const tjs_char *text, iTJSDispatch2 * context, bool isexpression);

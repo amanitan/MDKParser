@@ -150,6 +150,10 @@ enum class Token : int {
 	TEXT,			// normal text
 	VERTLINE,		// |
 	WAIT_RETURN,	// >
+	BEGIN_RUBY,		// 《
+	END_RUBY,		// 》
+	BEGIN_TXT_DECORATION,	// {
+	END_TXT_DECORATION,	// }
 };
 
 

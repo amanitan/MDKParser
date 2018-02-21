@@ -99,6 +99,7 @@ private:
 	};
 
 	std::deque<tTokenPair> RetValDeque;
+	std::vector<tjs_char> TextBody;
 
 //	bool BlockBrace;
 
@@ -140,6 +141,9 @@ private:
 
 
 	tjs_int IfLevel; // @if nesting level
+
+	void PutChar( tjs_char c );
+	ttstr GetText();
 
 public:
 	const tTJSVariant & GetValue(tjs_int idx) const

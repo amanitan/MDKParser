@@ -247,14 +247,33 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 			case T_SELECT:	// [0-9]+\.
 				// value : select number.
 				ParseSelect();
+				HasSelectLine = true;
 				break;
 			case T_NEXT_SCENARIO:	// >
 				ParseNextScenario();
 				break;
+			default:
+				if( ParseBody( token, value ) == false ) return;
+				break;
 			}
-			
-			// T_LINE_COMMENTS	// // comment
 		}
+	}
+}
+bool ParseBody( tjs_int token, tjs_int value ) {
+	if( token == Token::EOL ) return false;
+
+	switch( token ) {
+	case Token::TEXT:
+		PushValueCurrentLine( LexicalAnalyzer.GetValue(value) );
+		return true;
+
+	case Token::BEGIN_TAG:
+		ParseTag();
+		return true;
+
+	case Token::LINE_COMMENTS:
+		
+		return false;
 	}
 }
 //---------------------------------------------------------------------------
