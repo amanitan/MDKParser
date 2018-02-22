@@ -999,61 +999,61 @@ static void TJSInitReservedWordsHashTable()
 	if(TJSReservedWordHashInit) return;
 	TJSReservedWordHashInit = true;
 
-	TJS_REG_RES_WORD("break", T_BREAK);
-	TJS_REG_RES_WORD("continue", T_CONTINUE);
-	TJS_REG_RES_WORD("const", T_CONST);
-	TJS_REG_RES_WORD("catch", T_CATCH);
-	TJS_REG_RES_WORD("class", T_CLASS);
-	TJS_REG_RES_WORD("case", T_CASE);
-	TJS_REG_RES_WORD("debugger", T_DEBUGGER);
-	TJS_REG_RES_WORD("default", T_DEFAULT);
-	TJS_REG_RES_WORD("delete", T_DELETE);
-	TJS_REG_RES_WORD("do", T_DO);
-	TJS_REG_RES_WORD("extends", T_EXTENDS);
-	TJS_REG_RES_WORD("export", T_EXPORT);
-	TJS_REG_RES_WORD("enum", T_ENUM);
-	TJS_REG_RES_WORD("else", T_ELSE);
-	TJS_REG_RES_WORD("function", T_FUNCTION);
-	TJS_REG_RES_WORD("finally", T_FINALLY);
+	//TJS_REG_RES_WORD("break", T_BREAK);
+	//TJS_REG_RES_WORD("continue", T_CONTINUE);
+	//TJS_REG_RES_WORD("const", T_CONST);
+	//TJS_REG_RES_WORD("catch", T_CATCH);
+	//TJS_REG_RES_WORD("class", T_CLASS);
+	//TJS_REG_RES_WORD("case", T_CASE);
+	//TJS_REG_RES_WORD("debugger", T_DEBUGGER);
+	//TJS_REG_RES_WORD("default", T_DEFAULT);
+	//TJS_REG_RES_WORD("delete", T_DELETE);
+	//TJS_REG_RES_WORD("do", T_DO);
+	//TJS_REG_RES_WORD("extends", T_EXTENDS);
+	//TJS_REG_RES_WORD("export", T_EXPORT);
+	//TJS_REG_RES_WORD("enum", T_ENUM);
+	//TJS_REG_RES_WORD("else", T_ELSE);
+	//TJS_REG_RES_WORD("function", T_FUNCTION);
+	//TJS_REG_RES_WORD("finally", T_FINALLY);
 	TJS_REG_RES_WORD("false", T_FALSE);
-	TJS_REG_RES_WORD("for", T_FOR);
-	TJS_REG_RES_WORD("global", T_GLOBAL);
-	TJS_REG_RES_WORD("getter", T_GETTER);
-	TJS_REG_RES_WORD("goto", T_GOTO);
-	TJS_REG_RES_WORD("incontextof", T_INCONTEXTOF);
-	TJS_REG_RES_WORD("invalidate", T_INVALIDATE);
-	TJS_REG_RES_WORD("instanceof", T_INSTANCEOF);
-	TJS_REG_RES_WORD("isvalid", T_ISVALID);
-	TJS_REG_RES_WORD("import", T_IMPORT);
+	//TJS_REG_RES_WORD("for", T_FOR);
+	//TJS_REG_RES_WORD("global", T_GLOBAL);
+	//TJS_REG_RES_WORD("getter", T_GETTER);
+	//TJS_REG_RES_WORD("goto", T_GOTO);
+	//TJS_REG_RES_WORD("incontextof", T_INCONTEXTOF);
+	//TJS_REG_RES_WORD("invalidate", T_INVALIDATE);
+	//TJS_REG_RES_WORD("instanceof", T_INSTANCEOF);
+	//TJS_REG_RES_WORD("isvalid", T_ISVALID);
+	//TJS_REG_RES_WORD("import", T_IMPORT);
 	TJS_REG_RES_WORD("int", T_INT);
-	TJS_REG_RES_WORD("in", T_IN);
-	TJS_REG_RES_WORD("if", T_IF);
+	//TJS_REG_RES_WORD("in", T_IN);
+	//TJS_REG_RES_WORD("if", T_IF);
 	TJS_REG_RES_WORD("null", T_NULL);
-	TJS_REG_RES_WORD("new", T_NEW);
-	TJS_REG_RES_WORD("octet", T_OCTET);
-	TJS_REG_RES_WORD("protected", T_PROTECTED);
-	TJS_REG_RES_WORD("property", T_PROPERTY);
-	TJS_REG_RES_WORD("private", T_PRIVATE);
-	TJS_REG_RES_WORD("public", T_PUBLIC);
-	TJS_REG_RES_WORD("return", T_RETURN);
+	//TJS_REG_RES_WORD("new", T_NEW);
+	//TJS_REG_RES_WORD("octet", T_OCTET);
+	//TJS_REG_RES_WORD("protected", T_PROTECTED);
+	//TJS_REG_RES_WORD("property", T_PROPERTY);
+	//TJS_REG_RES_WORD("private", T_PRIVATE);
+	//TJS_REG_RES_WORD("public", T_PUBLIC);
+	//TJS_REG_RES_WORD("return", T_RETURN);
 	TJS_REG_RES_WORD("real", T_REAL);
-	TJS_REG_RES_WORD("synchronized", T_SYNCHRONIZED);
-	TJS_REG_RES_WORD("switch", T_SWITCH);
-	TJS_REG_RES_WORD("static", T_STATIC);
-	TJS_REG_RES_WORD("setter", T_SETTER);
+	//TJS_REG_RES_WORD("synchronized", T_SYNCHRONIZED);
+	//TJS_REG_RES_WORD("switch", T_SWITCH);
+	//TJS_REG_RES_WORD("static", T_STATIC);
+	//TJS_REG_RES_WORD("setter", T_SETTER);
 	TJS_REG_RES_WORD("string", T_STRING);
-	TJS_REG_RES_WORD("super", T_SUPER);
-	TJS_REG_RES_WORD("typeof", T_TYPEOF);
-	TJS_REG_RES_WORD("throw", T_THROW);
-	TJS_REG_RES_WORD("this", T_THIS);
+	//TJS_REG_RES_WORD("super", T_SUPER);
+	//TJS_REG_RES_WORD("typeof", T_TYPEOF);
+	//TJS_REG_RES_WORD("throw", T_THROW);
+	//TJS_REG_RES_WORD("this", T_THIS);
 	TJS_REG_RES_WORD("true", T_TRUE);
-	TJS_REG_RES_WORD("try", T_TRY);
+	//TJS_REG_RES_WORD("try", T_TRY);
 	TJS_REG_RES_WORD("void", T_VOID);
-	TJS_REG_RES_WORD("var", T_VAR);
-	TJS_REG_RES_WORD("while", T_WHILE);
+	//TJS_REG_RES_WORD("var", T_VAR);
+	//TJS_REG_RES_WORD("while", T_WHILE);
 	TJS_REG_RES_WORD("NaN", T_NAN);
 	TJS_REG_RES_WORD("Infinity", T_INFINITY);
-	TJS_REG_RES_WORD("with", T_WITH);
+	//TJS_REG_RES_WORD("with", T_WITH);
 }
 //---------------------------------------------------------------------------
 
@@ -1189,6 +1189,12 @@ ttstr tTJSLexicalAnalyzer::GetText() {
 	return ttstr( &TextBody[0], TextBody.size() );
 }
 tjs_int tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
+	if( RetValDeque.size() ) {
+		tTokenPair pair = RetValDeque.front();
+		RetValDeque.pop_front();
+		n = pair.value;
+		return pair.token;
+	}
 	if( TextBody.size() == 0 ) {
 		return Token::EOL;
 	}
@@ -1200,6 +1206,12 @@ tjs_int tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
  * 通常文をパースする
  */
 tjs_int tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
+	if( RetValDeque.size() ) {
+		tTokenPair pair = RetValDeque.front();
+		RetValDeque.pop_front();
+		n = pair.value;
+		return pair.token;
+	}
 	if(*Current == 0) return Token::EOL;
 
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
@@ -1252,6 +1264,12 @@ tjs_int tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
  * ルビか文字装飾を行う中間部分
  */
 tjs_int tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
+	if( RetValDeque.size() ) {
+		tTokenPair pair = RetValDeque.front();
+		RetValDeque.pop_front();
+		n = pair.value;
+		return pair.token;
+	}
 	if(*Current == 0) return Token::EOL;
 
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
@@ -1316,10 +1334,250 @@ tjs_int tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 	return Token::EOL;
 }
 tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
+	if( RetValDeque.size() ) {
+		tTokenPair pair = RetValDeque.front();
+		RetValDeque.pop_front();
+		n = pair.value;
+		return pair.token;
+	}
+
+	if(!TJSSkipSpace(&Current)) return Token::EOL;	// skip space
 	if(*Current == 0) return Token::EOL;
 
-re_match:
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
+
+	switch(*Current)
+	{
+	case TJS_W('>'):
+		TJS_1CHAR(Token::GT);
+
+	case TJS_W('<'):
+		{
+			const tjs_char *next = Current;
+			TJSNext(&next);
+			if(*next == TJS_W('%'))
+			{
+				// '<%'   octet literal
+				tTJSVariant v;
+				TJSParseOctet(v, &Current);
+				n = PutValue(v);
+				return Token::OCTET;
+			}
+		}
+		TJS_1CHAR(LT);
+
+	case TJS_W('='):
+		TJS_1CHAR(Token::EQUAL);
+
+	case TJS_W('!'):
+		TJS_1CHAR(Token::EXCRAMATION);
+
+	case TJS_W('&'):
+		TJS_1CHAR(Token::AMPERSAND);
+
+	case TJS_W('|'):
+		TJS_1CHAR(Token::VERTLINE);
+
+	case TJS_W('.'):
+		if(Current[1] >= TJS_W('0') && Current[1] <= TJS_W('9'))
+		{
+			// number
+			tTJSVariant v;
+			TJSParseNumber(v, &Current);
+			n=PutValue(v);
+			return Token::NUMBER;
+		}
+		TJS_1CHAR(Token::DOT);
+
+	case TJS_W('+'):
+		TJS_1CHAR(Token::PLUS);
+
+	case TJS_W('-'):
+		TJS_1CHAR(Token::MINUS);
+
+	case TJS_W('*'):
+		TJS_1CHAR(Token::ASTERISK);
+
+	case TJS_W('/'):
+		if( Current[1] == TJS_W('/') ) {
+			return Token::LINE_COMMENTS;
+		}
+		TJS_1CHAR(Token::SLASH);
+
+	case TJS_W('\\'):
+		TJS_1CHAR(Token::BACKSLASH);
+
+	case TJS_W('%'):
+		TJS_1CHAR(Token::PERCENT);
+
+	case TJS_W('^'):
+		TJS_1CHAR(Token::CHEVRON);
+
+	case TJS_W('['):
+		TJS_1CHAR(Token::LBRACKET);
+
+	case TJS_W(']'):	// tag 終了
+		TJS_1CHAR(Token::RBRACKET);
+
+	case TJS_W('('):
+		TJS_1CHAR(Token::LPARENTHESIS);
+
+	case TJS_W(')'):
+		TJS_1CHAR(Token::RPARENTHESIS);
+
+	case TJS_W('~'):
+		TJS_1CHAR(Token::TILDE);
+
+	case TJS_W('?'):
+		TJS_1CHAR(Token::QUESTION);
+
+	case TJS_W(':'):
+		if( Current[1] == TJS_W(':') ) {
+			Current += 2;
+			return Token::DOUBLE_COLON;
+		}
+		TJS_1CHAR(Token::COLON);
+
+	case TJS_W(','):
+		TJS_1CHAR(Token::COMMA);
+
+	case TJS_W(';'):
+		TJS_1CHAR(Token::SEMICOLON);
+
+	case TJS_W('{'):
+		TJS_1CHAR(Token::LBRACE);
+
+	case TJS_W('}'):
+		TJS_1CHAR(Token::RBRACE);
+
+	case TJS_W('#'):
+		TJS_1CHAR(Token::SHARP);
+
+	case TJS_W('$'):
+		TJS_1CHAR(Token::DOLLAR);
+
+		// literal string
+	case TJS_W('\''): {
+		tTJSVariant v;
+		TJSParseString(v, &Current);
+		n=PutValue(v);
+		return Token::SINGLE_TEXT;
+	}
+	case TJS_W('\"'): {
+		tTJSVariant v;
+		TJSParseString(v, &Current);
+		n=PutValue(v);
+		return Token::DOUBLE_TEXT;
+	}
+
+	case TJS_W('@'):
+		TJS_1CHAR(Token::AT);
+
+	case TJS_W('0'):
+	case TJS_W('1'):
+	case TJS_W('2'):
+	case TJS_W('3'):
+	case TJS_W('4'):
+	case TJS_W('5'):
+	case TJS_W('6'):
+	case TJS_W('7'):
+	case TJS_W('8'):
+	case TJS_W('9'): {	// number
+		tTJSVariant v;
+		bool r = TJSParseNumber(v, &Current);
+		if(!r) TJS_eTJSCompileError(TJSNumberError, Block, (tjs_int)(Current-Script));
+		n=PutValue(v);
+		return Token::NUMBER;
+	}
+	}
+
+	if(!TJS_iswalpha(*Current) && *Current!=TJS_W('_'))
+	{
+		ttstr str(TJSInvalidChar);
+		ttstr mes;
+		ttstr( *Current ).EscapeC( mes );
+		str.Replace(TJS_W("%1"), mes );
+		TJS_eTJSError(str);
+	}
+
+
+	const tjs_char *ptr = Current;
+	tjs_int nch = 0;
+	while(TJS_iswdigit(*ptr) || TJS_iswalpha(*ptr) || *ptr==TJS_W('_') || *ptr>0x0100 )
+		ptr++, nch++;
+
+	if(nch == 0)
+	{
+		ttstr str(TJSInvalidChar);
+		ttstr mes;
+		ttstr( *Current ).EscapeC( mes );
+		str.Replace(TJS_W("%1"), mes );
+		TJS_eTJSError(str);
+	}
+
+	ttstr str(Current, nch);
+	Current += nch;
+
+	tjs_char *s, *d;
+	s = d = str.Independ();
+	while(*s)
+	{
+		*d = *s;
+		d++, s++;
+	}
+	*d = 0;
+	str.FixLen();
+
+	tjs_int retnum;
+
+	if(BareWord)
+		retnum = -1;
+	else {
+		tTJSVariant val;
+		TJSReservedWordHash->PropGet( TJS_MEMBERMUSTEXIST, str.c_str(), str.GetHint(), &val, TJSReservedWordHash );
+		retnum = (tjs_int)val;
+	}
+
+	BareWord = false;
+
+	if(retnum == -1)
+	{
+		// not a reserved word
+		n = PutValue(str);
+		return SYMBOL;
+	}
+
+	switch(retnum)
+	{
+	case T_FALSE:
+		n = PutValue(tTJSVariant(false));
+		return Token::NUMBER;
+	case T_NULL:
+		n = PutValue(tTJSVariant((iTJSDispatch2*)nullptr));
+		return CONSTVAL;
+	case T_TRUE:
+		n = PutValue(tTJSVariant(true));
+		return Token::NUMBER;
+	case T_NAN:
+	  {
+		TJSSetFPUE();
+		tjs_real d;
+		*(tjs_uint64*)&d = TJS_IEEE_D_P_NaN;
+		n = PutValue(tTJSVariant(d));
+		return Token::NUMBER;
+	  }
+	case T_INFINITY:
+	  {
+		TJSSetFPUE();
+		tjs_real d;
+		*(tjs_uint64*)&d = TJS_IEEE_D_P_INF;
+		n = PutValue(tTJSVariant(d));
+		return Token::NUMBER;
+	  }
+	}
+
+	return retnum;
+
 }
 tjs_int tTJSLexicalAnalyzer::GetToken(tjs_int &n)
 {

@@ -27,11 +27,45 @@
 #include <list>
 #include <memory>
 
+/**
+ * tagは以下のような辞書形式で格納されている
+%[
+	name : "tag name",	// tag名
+	command : [
+		"name",	// 属性値がない場合は、コマンドとして格納される
+	]
+	attribute : %[		// 存在しない時はattribute要素自体ない(属性)
+		attrname : "value",
+		%[ name : "name", ref : "name" ],		// 変数参照の時
+		%[ name : "name", file : "name", prop : "name" ],	// ファイル参照の時
+	],
+	parameter : %[		// 存在しない時はparameter要素自体ない
+		name :  "value",
+	],
+]
+
+%[
+	lines : [
+		[ 1 ],		// 記号
+		[ "text" ],	// テキストはそのまま格納
+		[ %[name:"tag"] ],	// タグ
+		[ %[name:"ruby",text:"きりきり"], "吉里吉里", %[name:"endruby"] ],
+	]
+]
+
+ */
 //---------------------------------------------------------------------------
 // tTJSScriptBlock - a class for managing the script block
 //---------------------------------------------------------------------------
 class tTJSScriptBlock
 {
+	ttstr __endtrans_name(TJSMapGlobalStringMap(TJS_W("endtrans")));
+	ttstr __begintrans_name(TJSMapGlobalStringMap(TJS_W("begintrans")));
+
+	ttstr __storage_name(TJSMapGlobalStringMap(TJS_W("storage")));
+	ttstr __name_name(TJSMapGlobalStringMap(TJS_W("name")));
+	ttstr __value_name(TJSMapGlobalStringMap(TJS_W("value")));
+
 public:
 	tTJSScriptBlock();
 	virtual ~tTJSScriptBlock();
@@ -41,7 +75,10 @@ private:
 	tjs_char *Script;
 	tjs_char *Name;
 	tjs_int LineOffset;
-	bool HasSelectLine = false;
+	bool PrevSelectLine = false;	// 直前の行に選択肢があった
+	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
+
+	iTJSDispatch2* CurrentTagDic = nullptr; // DictionaryObject
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
 
@@ -83,6 +120,11 @@ public:
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
 
+	void CreateCurrentTagDic();
+	void CrearCurrentTag();
+	void SetCurrentTagName( const ttstr& name );
+	void PushCurrentTag();
+	void PushNameTag( const ttstr& name );
 	void PushValueCurrentLine( const tTJSVariant& val );
 
 public:

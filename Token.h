@@ -137,6 +137,7 @@ enum yytokentype {
    };
 
 enum class Token : int {
+	EMPTY = -1,
 	EOL = 0,
 	NEXT_SCENARIO,	// >
 	BEGIN_TRANS,	// >>>
@@ -154,6 +155,45 @@ enum class Token : int {
 	END_RUBY,		// 》
 	BEGIN_TXT_DECORATION,	// {
 	END_TXT_DECORATION,	// }
+	
+	GT,		// >
+	CONSTVAL,
+	LT,		// <
+	EQUAL,	// =
+	EXCRAMATION,	// !
+	AMPERSAND,		// &
+	DOT,			// .
+	PLUS,			// +
+	MINUS,			// -
+	ASTERISK,		// *
+	SLASH,			// /
+	BACKSLASH,		// \
+	PERCENT,		// %
+	CHEVRON,		// ^
+	LBRACKET,		// [
+	RBRACKET,		// ]
+	LPARENTHESIS,	// (
+	RPARENTHESIS,	// )
+	TILDE,			// ~
+	QUESTION,		// ?
+	COLON,			// :
+	DOUBLE_COLON,	// ::
+	COMMA,			// ,
+	SEMICOLON,		// ;
+	LBRACE,			// {
+	RBRACE,			// }
+	SHARP,			// #
+	DOLLAR,			// $
+	SINGLE_TEXT,	// '...'
+	DOUBLE_TEXT,	// "..."
+	NUMBER,			// 0-9
+	OCTET,			// <% ...  %>
+	T_TRUE,			// true
+	T_FALSE,		// false
+	T_NULL,			// null
+	SYMBOL,			// 
+	CONSTVAL,		//
+
 };
 
 

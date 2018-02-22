@@ -154,6 +154,9 @@ public:
 	{
 		return Values[idx]->GetString();
 	}
+	void RevNext( Token token, tjs_int value ) {
+		RetValDeque..push_back(tTokenPair((tjs_int)token,value0);
+	}
 
 	void Free(void);
 

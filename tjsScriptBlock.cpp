@@ -208,6 +208,77 @@ void tTJSScriptBlock::WarningLog( const tjs_char* message ) {
 		TVPAddLog( ttstr(TJS_W("warning: ")) + name + TJS_W("(") + ttstr(line) + TJS_W(")") );
 	}
 }
+void tTJSScriptBlock::CreateCurrentTagDic() {
+	if( CurrentTagDic ) {
+		CurrentTagDic->Release();
+	}
+	CurrentTagDic = TJSCreateArrayObject();
+}
+void tTJSScriptBlock::CrearCurrentTag() {
+	if( CurrentTagDic ) {
+		CurrentTagDic->Release();
+		CurrentTagDic = nullptr;
+	}
+}
+void tTJSScriptBlock::SetCurrentTagName( const ttstr& name ) {
+	if( !CurrentTagDic ) {
+		CurrentTagDic = TJSCreateArrayObject();
+	}
+	tTJSVariant tmp(name);
+	CurrentTagDic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tmp, CurrentTagDic );
+}
+void tTJSScriptBlock::PushCurrentTag() {
+	if( CurrentTagDic ) {
+		tTJSVariant tmp(CurrentTagDic, CurrentTagDic);
+		CurrentTagDic->Release();
+		CurrentTagDic = nullptr;
+		PushValueCurrentLine( tmp );
+	}
+}
+void tTJSScriptBlock::PushNameTag( const ttstr& name ) {
+	SetCurrentTagName( name );
+	PushCurrentTag();
+}
+void tTJSScriptBlock::ParseTransition() {
+	CreateTagDic();
+	SetCurrentTagName( __endtrans_name );
+
+	LineAttribute = true;
+	try {
+		tjs_int value;
+		Token token = LexicalAnalyzer.GetInTagToken( value );
+		if( token == Token::SYMBOL ) {
+			GetValue
+			token = LexicalAnalyzer.GetInTagToken( value );
+		}
+		do {
+			token
+			
+		} while( true );
+
+	} catch(...) {
+		LineAttribute = false;
+		throw;
+	}
+	LineAttribute = false;
+}
+bool ParseTag( tjs_int token, tjs_int value ) {
+	if( token == Token::EOL ) return false;
+
+	switch( token ) {
+	case Token::TEXT:
+		PushValueCurrentLine( LexicalAnalyzer.GetValue(value) );
+		return true;
+
+	case Token::BEGIN_TAG:
+		ParseTag();
+		return true;
+
+	case Token::LINE_COMMENTS:
+		
+		return false;
+	}
+}
 //---------------------------------------------------------------------------
 /**
  * 返却するデータ形式
@@ -229,51 +300,39 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 			LexicalAnalyzer.reset( str, length );
 			tjs_int value;
 			tjs_int token = LexicalAnalyzer.GetFirstToken( value );
+			if( PrevSelectLine ) {
+				
+			}
 
 			// first token
 			switch( token ) {
-			case T_BEGIN_TRANS:	// >>> 
-				// トランジション開始以降の文字列は無視
+			case Token::BEGIN_TRANS:	// >>> 
+				// トランジション開始以降の文字列は無視し、begintransタグを格納するのみ
+				PushNameTag( __begintrans_name );
+				return;
+			case Token::END_TRANS: {	// <<<
+				ParseTransition();
 				break;
-			case T_END_TRANS:	// <<<
-				ParseAttribute();
-				break;
-			case T_AT:	// @
+				}
+			case Token::AT:	// @
 				ParseCharacter();
 				break;
-			case T_SHARP:	// # タグ
+			case Token::LABEL:	// # タグ
 				ParseLabel();
 				break;
-			case T_SELECT:	// [0-9]+\.
+			case Token::SELECT:	// [0-9]+\.
 				// value : select number.
 				ParseSelect();
 				HasSelectLine = true;
 				break;
-			case T_NEXT_SCENARIO:	// >
+			case Token::NEXT_SCENARIO:	// >
 				ParseNextScenario();
 				break;
 			default:
-				if( ParseBody( token, value ) == false ) return;
+				if( ParseTag( token, value ) == false ) return;
 				break;
 			}
 		}
-	}
-}
-bool ParseBody( tjs_int token, tjs_int value ) {
-	if( token == Token::EOL ) return false;
-
-	switch( token ) {
-	case Token::TEXT:
-		PushValueCurrentLine( LexicalAnalyzer.GetValue(value) );
-		return true;
-
-	case Token::BEGIN_TAG:
-		ParseTag();
-		return true;
-
-	case Token::LINE_COMMENTS:
-		
-		return false;
 	}
 }
 //---------------------------------------------------------------------------
