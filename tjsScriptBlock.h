@@ -36,8 +36,8 @@
 	]
 	attribute : %[		// 存在しない時はattribute要素自体ない(属性)
 		attrname : "value",
-		%[ name : "name", ref : "name" ],		// 変数参照の時
-		%[ name : "name", file : "name", prop : "name" ],	// ファイル参照の時
+		attrname : %[ ref : "name" ],		// 変数参照の時
+		attrname : %[  file : "name", prop : "name" ],	// ファイル参照の時
 	],
 	parameter : %[		// 存在しない時はparameter要素自体ない
 		name :  "value",
@@ -54,6 +54,7 @@
 ]
 
  */
+ 
 //---------------------------------------------------------------------------
 // tTJSScriptBlock - a class for managing the script block
 //---------------------------------------------------------------------------
@@ -66,6 +67,17 @@ class tTJSScriptBlock
 	ttstr __name_name(TJSMapGlobalStringMap(TJS_W("name")));
 	ttstr __value_name(TJSMapGlobalStringMap(TJS_W("value")));
 
+	ttstr __attribute_name(TJSMapGlobalStringMap(TJS_W("attribute")));
+	ttstr __ref_name(TJSMapGlobalStringMap(TJS_W("ref")));
+	ttstr __file_name(TJSMapGlobalStringMap(TJS_W("file")));
+	ttstr __prop_name(TJSMapGlobalStringMap(TJS_W("prop")));
+
+	ttstr __trans_name(TJSMapGlobalStringMap(TJS_W("trans")));
+
+	enum class LogType {
+		Warning,
+		Error,
+	};
 public:
 	tTJSScriptBlock();
 	virtual ~tTJSScriptBlock();
@@ -79,6 +91,9 @@ private:
 	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
 
 	iTJSDispatch2* CurrentTagDic = nullptr; // DictionaryObject
+	iTJSDispatch2* CurrentAttributeDic = nullptr;
+	iTJSDispatch2* CurrentParameterDic = nullptr;
+	iTJSDispatch2* CurrentCommandArray = nullptr;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
 
@@ -116,6 +131,8 @@ public:
 	tjs_int GetLineOffset() const { return LineOffset; }
 
 	void WarningLog( const tjs_char* message );
+	void ErrorLog( const tjs_char* message );
+	void Log( LogType type, const tjs_char* message );
 
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
