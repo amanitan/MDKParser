@@ -73,6 +73,8 @@ class tTJSScriptBlock
 	ttstr __prop_name(TJSMapGlobalStringMap(TJS_W("prop")));
 
 	ttstr __trans_name(TJSMapGlobalStringMap(TJS_W("trans")));
+	ttstr __charname_name(TJSMapGlobalStringMap(TJS_W("charname")));
+	ttstr __alias_name(TJSMapGlobalStringMap(TJS_W("alias")));
 
 	enum class LogType {
 		Warning,
@@ -89,6 +91,7 @@ private:
 	tjs_int LineOffset;
 	bool PrevSelectLine = false;	// 直前の行に選択肢があった
 	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
+	bool MultiLineTag = false;
 
 	iTJSDispatch2* CurrentTagDic = nullptr; // DictionaryObject
 	iTJSDispatch2* CurrentAttributeDic = nullptr;

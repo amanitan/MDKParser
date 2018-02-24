@@ -434,6 +434,31 @@ void tTJSScriptBlock::ParseAttribute( const tTJSVariant& symbol ) {
 		LexicalAnalyzer.Unlex( token, value );
 	}
 }
+void tTJSScriptBlock::ParseAttributes() {
+	tjs_int value;
+	Token token = LexicalAnalyzer.GetInTagToken( value );
+	bool intag = true;
+	do {
+		switch( token ) {
+		case Token::SYMBOL:
+			ParseAttribute( LexicalAnalyzer.GetValue(value) );
+			break;
+		case Token::RBRACKET:	// ] タグ終了
+			intag = false;
+			break;
+		case Token::EOL:
+			if( !LineAttribute ) {
+				MultiLineTag = true;
+			}
+			intag = false;
+			break;
+		default:
+		}
+	} while( intag );
+}
+/**
+ * <<< transname attributes
+ */
 void tTJSScriptBlock::ParseTransition() {
 	CreateTagDic();
 	SetCurrentTagName( __endtrans_name );
@@ -453,21 +478,59 @@ void tTJSScriptBlock::ParseTransition() {
 				token = t;
 				value = v;
 			}
+		} else {
+			LexicalAnalyzer.Unlex( token, value );
 		}
-		do {
-			switch( token ) {
-			case Token::SYMBOL:
-				ParseAttribute( LexicalAnalyzer.GetValue(value) );
-				break;
-			}
-		} while( true );
-
+		ParseAttributes();
 	} catch(...) {
 		LineAttribute = false;
 		throw;
 	}
 	LineAttribute = false;
 }
+/**
+ * @名前指定の時、charnameタグとして処理する
+ * 指定された名前は name = 属性へ
+ * 代替表示名がある時は alias = 属性へ
+ */
+void tTJSScriptBlock::ParseCharacter() {
+	CreateTagDic();
+	SetCurrentTagName( __charname_name );
+
+	tjs_int value;
+	Token token = LexicalAnalyzer.GetInTagToken( value );
+	if( token == Token::SYMBOL ) {
+		const tTJSVariant& v = LexicalAnalyzer.GetValue( value );
+		PushAttribute( __name_name, v );
+		token = LexicalAnalyzer.GetInTagToken( value );
+		if( token == Token::SLASH ) {
+			// 代替表示名指定
+			token = LexicalAnalyzer.GetInTagToken( value );
+			if( token == Token::SYMBOL || token == Token::SINGLE_TEXT || token == Token::DOUBLE_TEXT ) {
+				v = LexicalAnalyzer.GetValue( value );
+				PushAttribute( __alias_name, v );
+			} else {
+				tTJSVariant voidvar;
+				PushAttribute( __alias_name, voidvar );	// alias に空文字指定
+				LexicalAnalyzer.Unlex( token, value );
+			}
+		} else {
+			LexicalAnalyzer.Unlex( token, value );
+		}
+		LineAttribute = true;
+		try {
+			ParseAttributes();
+		} catch(...) {
+			LineAttribute = false;
+			throw;
+		}
+		LineAttribute = false;
+	} else {
+		CompileErrorCount++;
+		ErrorLog( TJS_W("@の後に名前として解釈できない文字が指定されています。") );
+	}
+}
+
 bool ParseTag( tjs_int token, tjs_int value ) {
 	if( token == Token::EOL ) return false;
 
