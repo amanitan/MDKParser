@@ -1203,6 +1203,66 @@ tjs_int tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
 	return Token::TEXT;
 }
 /**
+ | までの文字列を読み取る
+ */
+tjs_int tTJSLexicalAnalyzer::ReadToVerline() {
+	if(*Current == 0) return -1;
+
+	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
+	TextBody.clear();
+	const tjs_char* start = Current;
+	tjs_int result = -1;
+
+	while( true ) {
+		switch(*Current) {
+		case 0: // end of text
+			ReturnText( result );
+			return result;
+		case TJS_W('|'):
+			if( TextBody.size() ) {
+				Current++;
+				ReturnText( result );
+				return result;
+			}
+			return -1;
+		}
+		PutChar( *Current );
+		Current++;
+	}
+	// ここには来ないはず
+	return -1;
+}
+/*
+ スペースまでの文字列を読みとる
+ */
+tjs_int tTJSLexicalAnalyzer::ReadToSpace() {
+	if(*Current == 0) return -1;
+
+	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
+	TextBody.clear();
+	const tjs_char* start = Current;
+	tjs_int result = -1;
+
+	while( true ) {
+		switch(*Current) {
+		case 0: // end of text
+			ReturnText( result );
+			return result;
+		case TJS_W(' '):
+			if( TextBody.size() ) {
+				Current++;
+				ReturnText( result );
+				return result;
+			}
+			return -1;
+		}
+		PutChar( *Current );
+		Current++;
+	}
+	// ここには来ないはず
+	return -1;
+}
+/**
  * 通常文をパースする
  */
 tjs_int tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
@@ -1577,7 +1637,6 @@ tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	}
 
 	return retnum;
-
 }
 tjs_int tTJSLexicalAnalyzer::GetToken(tjs_int &n)
 {

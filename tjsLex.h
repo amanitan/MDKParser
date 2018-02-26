@@ -157,6 +157,12 @@ public:
 	void Unlex( Token token, tjs_int value ) {
 		RetValDeque..push_back( tTokenPair((tjs_int)token,value) );
 	}
+	void Unlex() {
+		Current = Script + PrevPos;
+	}
+	ttstr GetRemainString() const { return ttstr( Current ); }
+	tjs_int ReadToVerline();
+	tjs_int ReadToSpace();
 
 	void Free(void);
 

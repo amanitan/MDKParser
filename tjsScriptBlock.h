@@ -30,6 +30,7 @@
 /**
  * tagは以下のような辞書形式で格納されている
 %[
+	type : "tag",
 	name : "tag name",	// tag名
 	command : [
 		"name",	// 属性値がない場合は、コマンドとして格納される
@@ -52,7 +53,18 @@
 		[ %[name:"ruby",text:"きりきり"], "吉里吉里", %[name:"endruby"] ],
 	]
 ]
-
+ * label の時は以下のような辞書形式で行に直接格納されている
+%[
+	type : "label",
+	name : "name",
+	description : "desc"
+]
+ * > の時は以下のような形で行に直接格納されている。
+%[
+	type : "next",
+	target : "filename",
+	cond : "flag == true",
+]
  */
  
 //---------------------------------------------------------------------------
@@ -64,8 +76,14 @@ class tTJSScriptBlock
 	ttstr __begintrans_name(TJSMapGlobalStringMap(TJS_W("begintrans")));
 
 	ttstr __storage_name(TJSMapGlobalStringMap(TJS_W("storage")));
+	ttstr __type_name(TJSMapGlobalStringMap(TJS_W("type")));
 	ttstr __name_name(TJSMapGlobalStringMap(TJS_W("name")));
 	ttstr __value_name(TJSMapGlobalStringMap(TJS_W("value")));
+
+	ttstr __tag_name(TJSMapGlobalStringMap(TJS_W("tag")));
+	ttstr __label_name(TJSMapGlobalStringMap(TJS_W("label")));
+	ttstr __select_name(TJSMapGlobalStringMap(TJS_W("select")));
+	ttstr __next_name(TJSMapGlobalStringMap(TJS_W("next")));
 
 	ttstr __attribute_name(TJSMapGlobalStringMap(TJS_W("attribute")));
 	ttstr __ref_name(TJSMapGlobalStringMap(TJS_W("ref")));
@@ -75,6 +93,12 @@ class tTJSScriptBlock
 	ttstr __trans_name(TJSMapGlobalStringMap(TJS_W("trans")));
 	ttstr __charname_name(TJSMapGlobalStringMap(TJS_W("charname")));
 	ttstr __alias_name(TJSMapGlobalStringMap(TJS_W("alias")));
+	ttstr __description_name(TJSMapGlobalStringMap(TJS_W("description")));
+	ttstr __text_name(TJSMapGlobalStringMap(TJS_W("text")));
+	ttstr __image_name(TJSMapGlobalStringMap(TJS_W("image")));
+	ttstr __target_name(TJSMapGlobalStringMap(TJS_W("target")));
+	ttstr __if_name(TJSMapGlobalStringMap(TJS_W("if")));
+	ttstr __cond_name(TJSMapGlobalStringMap(TJS_W("cond")));
 
 	enum class LogType {
 		Warning,
@@ -89,14 +113,17 @@ private:
 	tjs_char *Script;
 	tjs_char *Name;
 	tjs_int LineOffset;
+	tjs_int CurrentLine;
 	bool PrevSelectLine = false;	// 直前の行に選択肢があった
 	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
 	bool MultiLineTag = false;
 
-	iTJSDispatch2* CurrentTagDic = nullptr; // DictionaryObject
+	iTJSDispatch2* CurrentDic = nullptr; // DictionaryObject
 	iTJSDispatch2* CurrentAttributeDic = nullptr;
 	iTJSDispatch2* CurrentParameterDic = nullptr;
 	iTJSDispatch2* CurrentCommandArray = nullptr;
+
+	iTJSDispatch2* ScenarioLines = nullptr;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
 
@@ -141,11 +168,18 @@ private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
 
 	void CreateCurrentTagDic();
+	void CreateCurrentLabelDic();
 	void CrearCurrentTag();
 	void SetCurrentTagName( const ttstr& name );
+	void SetCurrentLabelName( const tTJSVariant& val );
+	void SetValueToCurrentDic( const ttstr& name, tTJSVariant& val );
+	void SetCurrentLabelDescription( const ttstr& desc );
 	void PushCurrentTag();
+	void PushCurrentLabel();
 	void PushNameTag( const ttstr& name );
 	void PushValueCurrentLine( const tTJSVariant& val );
+	void AddValueToLine( const tTJSVariant& val );
+	void AddCurrentDicToLine();
 
 public:
 	void SetText(tTJSVariant *result, const tjs_char *text, iTJSDispatch2 * context, bool isexpression);
