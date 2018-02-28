@@ -65,6 +65,10 @@
 	target : "filename",
 	cond : "flag == true",
 ]
+ * コメントの時
+%[
+	type : "comment"
+]
  */
  
 //---------------------------------------------------------------------------
@@ -86,6 +90,8 @@ class tTJSScriptBlock
 	ttstr __next_name(TJSMapGlobalStringMap(TJS_W("next")));
 
 	ttstr __attribute_name(TJSMapGlobalStringMap(TJS_W("attribute")));
+	ttstr __parameter_name(TJSMapGlobalStringMap(TJS_W("parameter")));
+	ttstr __command_name(TJSMapGlobalStringMap(TJS_W("command")));
 	ttstr __ref_name(TJSMapGlobalStringMap(TJS_W("ref")));
 	ttstr __file_name(TJSMapGlobalStringMap(TJS_W("file")));
 	ttstr __prop_name(TJSMapGlobalStringMap(TJS_W("prop")));
@@ -99,11 +105,20 @@ class tTJSScriptBlock
 	ttstr __target_name(TJSMapGlobalStringMap(TJS_W("target")));
 	ttstr __if_name(TJSMapGlobalStringMap(TJS_W("if")));
 	ttstr __cond_name(TJSMapGlobalStringMap(TJS_W("cond")));
+	ttstr __comment_name(TJSMapGlobalStringMap(TJS_W("comment")));
+
+	ttstr __voice_name(TJSMapGlobalStringMap(TJS_W("voice")));
+	ttstr __time_name(TJSMapGlobalStringMap(TJS_W("time")));
+	ttstr __wait_name(TJSMapGlobalStringMap(TJS_W("time")));
+	ttstr __fade_name(TJSMapGlobalStringMap(TJS_W("time")));
 
 	enum class LogType {
 		Warning,
 		Error,
 	};
+
+	static std::map<Token,ttstr>	TagCommandPair;
+	static std::map<tjs_char,Token>		SignToToken;
 public:
 	tTJSScriptBlock();
 	virtual ~tTJSScriptBlock();
@@ -124,6 +139,8 @@ private:
 	iTJSDispatch2* CurrentCommandArray = nullptr;
 
 	iTJSDispatch2* ScenarioLines = nullptr;
+
+	iTJSDispatch2* ArrayAddFunc = nullptr;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
 
@@ -164,6 +181,8 @@ public:
 	void ErrorLog( const tjs_char* message );
 	void Log( LogType type, const tjs_char* message );
 
+	static void Initialize();
+	static void AddSignWord( tjs_char sign, const ttstr& word );
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
 
@@ -180,7 +199,26 @@ private:
 	void PushValueCurrentLine( const tTJSVariant& val );
 	void AddValueToLine( const tTJSVariant& val );
 	void AddCurrentDicToLine();
+	void PushAttribute( const ttstr& name, const tTJSVariant& value, bool isparameter=false );
+	void PushAttribute( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter=false );
+	void PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter=false );
+	void PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter=false );
+	void PushTagCommand( const ttstr& name );
 
+	void ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVariant& valueSymbol, bool isparameter=false );
+	void ParseAttribute( const tTJSVariant& symbol, bool isparameter=false );
+	bool ParseSpecialAttribute( Token token, tjs_int value );
+	void ParseTag();
+	void ParseAttributes();
+	void ParseTransition();
+	void ParseCharacter();
+	void ParseLabel();
+	void ParseSelect( tjs_int number );
+	void ParseNextScenario();
+	bool ParseTag( tjs_int token, tjs_int value );
+	void ParseLine( tjs_int line );
+
+	static ttstr* GetTagSignWord( Token token );
 public:
 	void SetText(tTJSVariant *result, const tjs_char *text, iTJSDispatch2 * context, bool isexpression);
 };

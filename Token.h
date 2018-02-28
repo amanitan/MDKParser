@@ -146,6 +146,8 @@ enum class Token : int {
 	LINE_COMMENTS,	// //
 	SELECT,			// [0-9]+\.
 	LABEL,			// #
+	BEGIN_FIX_NAME,	// <=
+	END_FIX_NAME,	// =>
 
 	BEGIN_TAG,		// [
 	TEXT,			// normal text

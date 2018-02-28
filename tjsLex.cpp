@@ -1202,10 +1202,11 @@ tjs_int tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
 	n = PutValue( variant );
 	return Token::TEXT;
 }
+
 /**
- | までの文字列を読み取る
+ * 指定文字まで読む
  */
-tjs_int tTJSLexicalAnalyzer::ReadToVerline() {
+tjs_int tTJSLexicalAnalyzer::ReadToChar( tjs_char end ) {
 	if(*Current == 0) return -1;
 
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
@@ -1218,37 +1219,7 @@ tjs_int tTJSLexicalAnalyzer::ReadToVerline() {
 		case 0: // end of text
 			ReturnText( result );
 			return result;
-		case TJS_W('|'):
-			if( TextBody.size() ) {
-				Current++;
-				ReturnText( result );
-				return result;
-			}
-			return -1;
-		}
-		PutChar( *Current );
-		Current++;
-	}
-	// ここには来ないはず
-	return -1;
-}
-/*
- スペースまでの文字列を読みとる
- */
-tjs_int tTJSLexicalAnalyzer::ReadToSpace() {
-	if(*Current == 0) return -1;
-
-	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
-	TextBody.clear();
-	const tjs_char* start = Current;
-	tjs_int result = -1;
-
-	while( true ) {
-		switch(*Current) {
-		case 0: // end of text
-			ReturnText( result );
-			return result;
-		case TJS_W(' '):
+		case end:
 			if( TextBody.size() ) {
 				Current++;
 				ReturnText( result );
@@ -1459,9 +1430,11 @@ tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 		TJS_1CHAR(Token::ASTERISK);
 
 	case TJS_W('/'):
+		/*
 		if( Current[1] == TJS_W('/') ) {
 			return Token::LINE_COMMENTS;
 		}
+		*/
 		TJS_1CHAR(Token::SLASH);
 
 	case TJS_W('\\'):

@@ -161,8 +161,13 @@ public:
 		Current = Script + PrevPos;
 	}
 	ttstr GetRemainString() const { return ttstr( Current ); }
-	tjs_int ReadToVerline();
-	tjs_int ReadToSpace();
+
+	/* | までの文字列を読み取る */
+	tjs_int ReadToVerline() { return ReadToChar( TJS_W('|')); }
+	/* スペースまでの文字列を読み取る */
+	tjs_int ReadToSpace() { return ReadToChar( TJS_W(' ')); }
+	/* 指定文字までの文字列を読み取る */
+	tjs_int ReadToChar( tjs_char end );
 
 	void Free(void);
 
