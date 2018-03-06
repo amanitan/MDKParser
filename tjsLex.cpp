@@ -1056,54 +1056,6 @@ static void TJSInitReservedWordsHashTable()
 	//TJS_REG_RES_WORD("with", T_WITH);
 }
 //---------------------------------------------------------------------------
-
-
-
-//---------------------------------------------------------------------------
-// tTJSLexicalAnalyzer
-//---------------------------------------------------------------------------
-tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(tTJSScriptBlock *block,
-	const tjs_char *script, bool exprmode, bool resneeded)
-{
-	// resneeded is valid only if exprmode is true
-
-	TJS_F_TRACE("tTJSLexicalAnalyzer::tTJSLexicalAnalyzer");
-
-	TJSInitReservedWordsHashTable();
-
-	Block = block;
-	ExprMode = exprmode;
-	ResultNeeded = resneeded;
-	PrevToken = -1;
-	tjs_int len = (tjs_int)TJS_strlen(script);
-	Script = new tjs_char[len+2];
-	TJS_strcpy(Script, script);
-	if(ExprMode)
-	{
-		// append ';' on expression analyze mode
-		Script[len] = TJS_W(';');
-		Script[len+1] = 0;
-	}
-	else
-	{
-		if(Script[0] == TJS_W('#') && Script[1] == TJS_W('!'))
-		{
-			// shell script like file
-			Script[0] = TJS_W('/');
-			Script[1] = TJS_W('/');  // convert #! to //
-		}
-	}
-
-	Current = Script;
-	IfLevel = 0;
-	PrevPos = 0;
-	NestLevel = 0;
-	First = true;
-	RegularExpression = false;
-	BareWord = false;
-	PutValue(tTJSVariant());
-}
-
 static tjs_int TJSParseInteger( const tjs_char **ptr ) {
 	tjs_int v = 0;
 	tjs_int c = 0;
@@ -1117,9 +1069,41 @@ static tjs_int TJSParseInteger( const tjs_char **ptr ) {
 
 
 //---------------------------------------------------------------------------
+// tTJSLexicalAnalyzer
+//---------------------------------------------------------------------------
+tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(tTJSScriptBlock *block)
+ : ScriptWork(new tjs_char[1024]), ScriptWorkSize(1024), Block(block)
+{
+	// resneeded is valid only if exprmode is true
+	TJS_F_TRACE("tTJSLexicalAnalyzer::tTJSLexicalAnalyzer");
+	TJSInitReservedWordsHashTable();
+
+	PrevToken = -1;
+	tjs_int len = (tjs_int)TJS_strlen(script);
+	IfLevel = 0;
+	PrevPos = 0;
+	NestLevel = 0;
+	First = true;
+	RegularExpression = false;
+	BareWord = false;
+	PutValue(tTJSVariant());
+}
+//---------------------------------------------------------------------------
 tTJSLexicalAnalyzer::~tTJSLexicalAnalyzer()
 {
 	Free();
+}
+//---------------------------------------------------------------------------
+void tTJSLexicalAnalyzer::reset( const tjs_char *str, tjs_int length ) {
+	if( length > (ScriptWorkSize-1) ) {
+		ScriptWork.reset( tjs_char[length+1] );
+		ScriptWorkSize = length + 1;
+	}
+	TJS_strncpy( ScriptWork.get(), str, length );
+	ScriptWork[length] = 0;
+	Script = ScriptWork.get();
+	Current = Script;
+	First = true;
 }
 //---------------------------------------------------------------------------
 #define TJS_MATCH_W(word, code) \
@@ -1958,7 +1942,6 @@ tjs_int tTJSLexicalAnalyzer::PutValue(const tTJSVariant &val)
 //---------------------------------------------------------------------------
 void tTJSLexicalAnalyzer::Free(void)
 {
-	if(Script) delete [] Script;
 	std::vector<tTJSVariant*>::iterator i;
 	for(i = Values.begin(); i != Values.end(); i++)
 	{

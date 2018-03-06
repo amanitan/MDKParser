@@ -91,7 +91,7 @@ ttstr* tTJSScriptBlock::GetTagSignWord( Token token ) {
 	return nullptr;
 }
 //---------------------------------------------------------------------------
-tTJSScriptBlock::tTJSScriptBlock() : RefCount(1), Script(NULL), Name(NULL), LineOffset(0) {
+tTJSScriptBlock::tTJSScriptBlock() : RefCount(1), LineOffset(0) {
 	iTJSDispatch2* arrayClass = nullptr;
 	iTJSDispatch2* a = TJSCreateArrayObject( &arrayClass )
 	try {
@@ -107,13 +107,12 @@ tTJSScriptBlock::tTJSScriptBlock() : RefCount(1), Script(NULL), Name(NULL), Line
 	}
 	a->Release();
 	arrayClass->Release();
+
+	LexicalAnalyzer.reset( new tTJSLexicalAnalyzer(this) );
 }
 //---------------------------------------------------------------------------
 tTJSScriptBlock::~tTJSScriptBlock()
 {
-	if(Script) delete [] Script;
-	if(Name) delete [] Name;
-
 	if(ArrayAddFunc) ArrayAddFunc->Release(), ArrayAddFunc = nullptr;
 }
 //---------------------------------------------------------------------------
@@ -132,25 +131,19 @@ void tTJSScriptBlock::Release(void)
 //---------------------------------------------------------------------------
 void tTJSScriptBlock::SetName(const tjs_char *name, tjs_int lineofs)
 {
-	if(Name) delete [] Name, Name = NULL;
-	if(name)
-	{
+	if( name ) {
 		LineOffset = lineofs;
-		Name = new tjs_char[ TJS_strlen(name) + 1];
-		TJS_strcpy(Name, name);
+		Name.reset( new tjs_char[ TJS_strlen(name) + 1] );
+		TJS_strcpy(Name.get(), name);
 	}
 }
 //---------------------------------------------------------------------------
 const tjs_char * tTJSScriptBlock::GetLine(tjs_int line, tjs_int *linelength) const
 {
-	if( Script == NULL ) {
-		*linelength = 10;
-		return TJS_W("Bytecode.");
-	}
 	// note that this function DOES matter LineOffset
 	line -= LineOffset;
 	if(linelength) *linelength = LineLengthVector[line];
-	return Script + LineVector[line];
+	return Script.get() + LineVector[line];
 }
 //---------------------------------------------------------------------------
 tjs_int tTJSScriptBlock::SrcPosToLine(tjs_int pos) const
@@ -177,13 +170,11 @@ tjs_int tTJSScriptBlock::LineToSrcPos(tjs_int line) const
 //---------------------------------------------------------------------------
 ttstr tTJSScriptBlock::GetLineDescriptionString(tjs_int pos) const
 {
-	// get short description, like "mainwindow.tjs(321)"
-	// pos is in character count from the first of the script
-	tjs_int line =SrcPosToLine(pos)+1;
+	tjs_int line = SrcPosToLine(pos)+1;
 	ttstr name;
-	if(Name)
+	if( Name )
 	{
-		name = Name;
+		name = ttstr( Name.get() );
 	}
 	else
 	{
@@ -200,11 +191,9 @@ void tTJSScriptBlock::ConsoleOutput(const tjs_char *msg, void *data)
 	TVPAddLog( msg );
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::SetText(tTJSVariant *result, const tjs_char *text,
-	iTJSDispatch2 * context, bool isexpression)
+void tTJSScriptBlock::SetText(tTJSVariant *result, const tjs_char *text)
 {
 	TJS_F_TRACE("tTJSScriptBlock::SetText");
-
 
 	// compiles text and executes its global level scripts.
 	// the script will be compiled as an expression if isexpressn is true.
@@ -213,12 +202,12 @@ void tTJSScriptBlock::SetText(tTJSVariant *result, const tjs_char *text,
 
 	TJS_D((TJS_W("Counting lines ...\n")))
 
-	Script = new tjs_char[TJS_strlen(text)+1];
-	TJS_strcpy(Script, text);
+	Script.reset( new tjs_char[TJS_strlen(text)+1] );
+	TJS_strcpy(Script.get(), text);
 
 	// calculation of line-count
-	tjs_char *ls = Script;
-	tjs_char *p = Script;
+	tjs_char *ls = Script.get();
+	tjs_char *p = Script.get();
 	while(*p)
 	{
 		if(*p == TJS_W('\r') || *p == TJS_W('\n'))
@@ -241,35 +230,10 @@ void tTJSScriptBlock::SetText(tTJSVariant *result, const tjs_char *text,
 		LineLengthVector.push_back(int(p - ls));
 	}
 
-	try
-	{
-		// parse
-		Parse(text, isexpression, result != NULL);
-
-	}
-	catch(...)
-	{
-		throw;
-	}
-}
-//---------------------------------------------------------------------------
-void tTJSScriptBlock::Parse(const tjs_char *script, bool isexpr, bool resultneeded)
-{
-	if(!script) return;
-
 	CompileErrorCount = 0;
-	LexicalAnalyzer.reset( new tTJSLexicalAnalyzer(this, script, isexpr, resultneeded) );
-	try
-	{
-		yyparse(this);
+	for( tjs_uint i = 0; i < LineVector.size(); i++ ) {
+		ParseLine( i );
 	}
-	catch(...)
-	{
-		LexicalAnalyzer.reset();
-		throw;
-	}
-	LexicalAnalyzer.reset();
-
 	if(CompileErrorCount)
 	{
 		TJS_eTJSCompileError(FirstError, this, FirstErrorPos);
@@ -279,9 +243,11 @@ void tTJSScriptBlock::Parse(const tjs_char *script, bool isexpr, bool resultneed
 void tTJSScriptBlock::WarningLog( const tjs_char* message ) {
 	Log( LogType::Warning, message );
 }
+//---------------------------------------------------------------------------
 void tTJSScriptBlock::ErrorLog( const tjs_char* message ) {
 	Log( LogType::Error, message );
 }
+//---------------------------------------------------------------------------
 void tTJSScriptBlock::Log( LogType type, const tjs_char* message ) {
 	ttstr typemes;
 	if( type == LogType::Warning ) {
@@ -299,6 +265,7 @@ void tTJSScriptBlock::Log( LogType type, const tjs_char* message ) {
 		TVPAddLog( typemes + name + TJS_W("(") + ttstr(line) + TJS_W(")") );
 	}
 }
+//---------------------------------------------------------------------------
 void tTJSScriptBlock::CreateCurrentDic( const tTJSVariantString& name ) {
 	if( CurrentDic ) {
 		CurrentDic->Release();

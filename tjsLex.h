@@ -71,20 +71,15 @@ class tTJSScriptBlock;
 class tTJSLexicalAnalyzer
 {
 public:
-	tTJSLexicalAnalyzer(tTJSScriptBlock *block, const tjs_char *script,
-		bool exprmode, bool resneeded);
+	tTJSLexicalAnalyzer(tTJSScriptBlock *block);
 	~tTJSLexicalAnalyzer();
 
 private:
-	const tjs_char *Current;
+	const tjs_char *Current = nullptr;
 	tjs_int PrevPos;
 	tjs_int PrevToken;
 	bool First;
-	bool ExprMode;
-	bool ResultNeeded;
 	tjs_int NestLevel;
-
-	bool DicFunc; //----- dicfunc quick-hack
 
 	struct tTokenPair
 	{
@@ -98,10 +93,10 @@ private:
 		}
 	};
 
-	std::deque<tTokenPair> RetValDeque;
-	std::vector<tjs_char> TextBody;
-
-//	bool BlockBrace;
+	std::deque<tTokenPair>		RetValDeque;
+	std::vector<tjs_char>		TextBody;
+	std::unique_ptr<tjs_char[]>	ScriptWork;
+	tjs_int						ScriptWorkSize;
 
 	bool RegularExpression;
 	bool BareWord;
@@ -123,7 +118,7 @@ private:
 
 	tTJSScriptBlock *Block;
 
-	tjs_char *Script;
+	tjs_char *Script = nullptr;
 
 	tTJSSkipCommentResult SkipUntil_endif();
 	tTJSSkipCommentResult ProcessPPStatement();
@@ -146,6 +141,8 @@ private:
 	ttstr GetText();
 
 public:
+	void reset( const tjs_char *str, tjs_int length );
+
 	const tTJSVariant & GetValue(tjs_int idx) const
 	{
 		return *Values[idx];
@@ -155,7 +152,7 @@ public:
 		return Values[idx]->GetString();
 	}
 	void Unlex( Token token, tjs_int value ) {
-		RetValDeque..push_back( tTokenPair((tjs_int)token,value) );
+		RetValDeque.push_back( tTokenPair((tjs_int)token,value) );
 	}
 	void Unlex() {
 		Current = Script + PrevPos;

@@ -109,15 +109,15 @@ class tTJSScriptBlock
 
 	ttstr __voice_name(TJSMapGlobalStringMap(TJS_W("voice")));
 	ttstr __time_name(TJSMapGlobalStringMap(TJS_W("time")));
-	ttstr __wait_name(TJSMapGlobalStringMap(TJS_W("time")));
-	ttstr __fade_name(TJSMapGlobalStringMap(TJS_W("time")));
+	ttstr __wait_name(TJSMapGlobalStringMap(TJS_W("wait")));
+	ttstr __fade_name(TJSMapGlobalStringMap(TJS_W("fade")));
 
 	enum class LogType {
 		Warning,
 		Error,
 	};
 
-	static std::map<Token,ttstr>	TagCommandPair;
+	static std::map<Token,ttstr>		TagCommandPair;
 	static std::map<tjs_char,Token>		SignToToken;
 public:
 	tTJSScriptBlock();
@@ -125,8 +125,8 @@ public:
 
 private:
 	tjs_int RefCount;
-	tjs_char *Script;
-	tjs_char *Name;
+	std::unique_ptr<tjs_char[]> Script;
+	std::unique_ptr<tjs_char[]> Name;
 	tjs_int LineOffset;
 	tjs_int CurrentLine;
 	bool PrevSelectLine = false;	// 直前の行に選択肢があった
@@ -164,7 +164,6 @@ public:
 
 	const tjs_char *GetScript() const { return Script; }
 
-	void Parse(const tjs_char *script, bool isexpr, bool resultneeded);
 	void ParseLine( tjs_int line );
 
 	void SetFirstError(const tjs_char *error, tjs_int pos);
