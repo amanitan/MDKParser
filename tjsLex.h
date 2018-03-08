@@ -23,6 +23,7 @@
 #include "Token.h"
 #include <vector>
 #include <deque>
+#include <memory>
 
 
 #define TJS_malloc			malloc
@@ -143,14 +144,9 @@ private:
 public:
 	void reset( const tjs_char *str, tjs_int length );
 
-	const tTJSVariant & GetValue(tjs_int idx) const
-	{
-		return *Values[idx];
-	}
-	const tjs_char * GetString(tjs_int idx) const
-	{
-		return Values[idx]->GetString();
-	}
+	const tTJSVariant & GetValue(tjs_int idx) const { return *Values[idx]; }
+	const tjs_char * GetString(tjs_int idx) const { return Values[idx]->GetString(); }
+
 	void Unlex( Token token, tjs_int value ) {
 		RetValDeque.push_back( tTokenPair((tjs_int)token,value) );
 	}
@@ -177,6 +173,11 @@ public:
 	void SetStartOfRegExp(void);
 	void SetNextIsBareWord();
 
+	Token GetFirstToken( tjs_int &n );
+	Token ReturnText( tjs_int &n );
+	Token GetTextToken( tjs_int &n );
+	Token GetRubyDecorationToken( tjs_int &n );
+	Token GetInTagToken( tjs_int &n );
 };
 //---------------------------------------------------------------------------
 

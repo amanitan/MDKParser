@@ -26,6 +26,7 @@
 
 #include <list>
 #include <memory>
+#include <map>
 
 /**
  * tagは以下のような辞書形式で格納されている
@@ -76,49 +77,49 @@
 //---------------------------------------------------------------------------
 class tTJSScriptBlock
 {
-	ttstr __endtrans_name(TJSMapGlobalStringMap(TJS_W("endtrans")));
-	ttstr __begintrans_name(TJSMapGlobalStringMap(TJS_W("begintrans")));
+	ttstr __endtrans_name;
+	ttstr __begintrans_name;
 
-	ttstr __storage_name(TJSMapGlobalStringMap(TJS_W("storage")));
-	ttstr __type_name(TJSMapGlobalStringMap(TJS_W("type")));
-	ttstr __name_name(TJSMapGlobalStringMap(TJS_W("name")));
-	ttstr __value_name(TJSMapGlobalStringMap(TJS_W("value")));
+	ttstr __storage_name;
+	ttstr __type_name;
+	ttstr __name_name;
+	ttstr __value_name;
 
-	ttstr __tag_name(TJSMapGlobalStringMap(TJS_W("tag")));
-	ttstr __label_name(TJSMapGlobalStringMap(TJS_W("label")));
-	ttstr __select_name(TJSMapGlobalStringMap(TJS_W("select")));
-	ttstr __next_name(TJSMapGlobalStringMap(TJS_W("next")));
+	ttstr __tag_name;
+	ttstr __label_name;
+	ttstr __select_name;
+	ttstr __next_name;
 
-	ttstr __attribute_name(TJSMapGlobalStringMap(TJS_W("attribute")));
-	ttstr __parameter_name(TJSMapGlobalStringMap(TJS_W("parameter")));
-	ttstr __command_name(TJSMapGlobalStringMap(TJS_W("command")));
-	ttstr __ref_name(TJSMapGlobalStringMap(TJS_W("ref")));
-	ttstr __file_name(TJSMapGlobalStringMap(TJS_W("file")));
-	ttstr __prop_name(TJSMapGlobalStringMap(TJS_W("prop")));
+	ttstr __attribute_name;
+	ttstr __parameter_name;
+	ttstr __command_name;
+	ttstr __ref_name;
+	ttstr __file_name;
+	ttstr __prop_name;
 
-	ttstr __trans_name(TJSMapGlobalStringMap(TJS_W("trans")));
-	ttstr __charname_name(TJSMapGlobalStringMap(TJS_W("charname")));
-	ttstr __alias_name(TJSMapGlobalStringMap(TJS_W("alias")));
-	ttstr __description_name(TJSMapGlobalStringMap(TJS_W("description")));
-	ttstr __text_name(TJSMapGlobalStringMap(TJS_W("text")));
-	ttstr __image_name(TJSMapGlobalStringMap(TJS_W("image")));
-	ttstr __target_name(TJSMapGlobalStringMap(TJS_W("target")));
-	ttstr __if_name(TJSMapGlobalStringMap(TJS_W("if")));
-	ttstr __cond_name(TJSMapGlobalStringMap(TJS_W("cond")));
-	ttstr __comment_name(TJSMapGlobalStringMap(TJS_W("comment")));
+	ttstr __trans_name;
+	ttstr __charname_name;
+	ttstr __alias_name;
+	ttstr __description_name;
+	ttstr __text_name;
+	ttstr __image_name;
+	ttstr __target_name;
+	ttstr __if_name;
+	ttstr __cond_name;
+	ttstr __comment_name;
 
-	ttstr __voice_name(TJSMapGlobalStringMap(TJS_W("voice")));
-	ttstr __time_name(TJSMapGlobalStringMap(TJS_W("time")));
-	ttstr __wait_name(TJSMapGlobalStringMap(TJS_W("wait")));
-	ttstr __fade_name(TJSMapGlobalStringMap(TJS_W("fade")));
+	ttstr __voice_name;
+	ttstr __time_name;
+	ttstr __wait_name;
+	ttstr __fade_name;
 
 	enum class LogType {
 		Warning,
 		Error,
 	};
 
-	static std::map<Token,ttstr>		TagCommandPair;
-	static std::map<tjs_char,Token>		SignToToken;
+	std::map<Token,ttstr>			TagCommandPair;
+	std::map<tjs_char,Token>		SignToToken;
 public:
 	tTJSScriptBlock();
 	virtual ~tTJSScriptBlock();
@@ -129,9 +130,9 @@ private:
 	std::unique_ptr<tjs_char[]> Name;
 	tjs_int LineOffset;
 	tjs_int CurrentLine;
-	bool PrevSelectLine = false;	// 直前の行に選択肢があった
 	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
 	bool MultiLineTag = false;
+	bool HasSelectLine = false;
 
 	iTJSDispatch2* CurrentDic = nullptr; // DictionaryObject
 	iTJSDispatch2* CurrentAttributeDic = nullptr;
@@ -139,7 +140,6 @@ private:
 	iTJSDispatch2* CurrentCommandArray = nullptr;
 
 	iTJSDispatch2* ScenarioLines = nullptr;
-
 	iTJSDispatch2* ArrayAddFunc = nullptr;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
@@ -149,9 +149,9 @@ private:
 
 	tTJSString FirstError;
 	tjs_int FirstErrorPos;
+	tjs_int CompileErrorCount;
 
 public:
-	tjs_int CompileErrorCount;
 
 	void AddRef();
 	void Release();
@@ -162,15 +162,11 @@ public:
 
 	ttstr GetLineDescriptionString(tjs_int pos) const;
 
-	const tjs_char *GetScript() const { return Script; }
-
-	void ParseLine( tjs_int line );
-
-	void SetFirstError(const tjs_char *error, tjs_int pos);
+	const tjs_char *GetScript() const { return Script.get(); }
 
 	tTJSLexicalAnalyzer * GetLexicalAnalyzer() { return LexicalAnalyzer.get(); }
 
-	const tjs_char *GetName() const { return Name; }
+	const tjs_char *GetName() const { return Name.get(); }
 	void SetName(const tjs_char *name, tjs_int lineofs);
 	ttstr GetNameInfo() const;
 
@@ -180,17 +176,20 @@ public:
 	void ErrorLog( const tjs_char* message );
 	void Log( LogType type, const tjs_char* message );
 
-	static void Initialize();
-	static void AddSignWord( tjs_char sign, const ttstr& word );
+	void Initialize();
+	void AddSignWord( tjs_char sign, const ttstr& word );
+
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
+
+	void CreateCurrentDic( const tTJSVariantString& name );
 
 	void CreateCurrentTagDic();
 	void CreateCurrentLabelDic();
 	void CrearCurrentTag();
 	void SetCurrentTagName( const ttstr& name );
 	void SetCurrentLabelName( const tTJSVariant& val );
-	void SetValueToCurrentDic( const ttstr& name, tTJSVariant& val );
+	void SetValueToCurrentDic( const ttstr& name, const tTJSVariant& val );
 	void SetCurrentLabelDescription( const ttstr& desc );
 	void PushCurrentTag();
 	void PushCurrentLabel();
@@ -214,12 +213,12 @@ private:
 	void ParseLabel();
 	void ParseSelect( tjs_int number );
 	void ParseNextScenario();
-	bool ParseTag( tjs_int token, tjs_int value );
+	bool ParseTag( Token token, tjs_int value );
 	void ParseLine( tjs_int line );
 
-	static ttstr* GetTagSignWord( Token token );
+	ttstr* GetTagSignWord( Token token );
 public:
-	void SetText(tTJSVariant *result, const tjs_char *text, iTJSDispatch2 * context, bool isexpression);
+	void SetText(tTJSVariant *result, const tjs_char *text);
 };
 //---------------------------------------------------------------------------
 

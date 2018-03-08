@@ -13,6 +13,7 @@
 #include "tjsLex.h"
 #include <math.h>
 #include <ctype.h>
+#include "tjsScriptBlock.h"
 
 static const tjs_char* TJSUnclosedComment = TJS_W("Un-terminated comment");
 static const tjs_char* TJSStringParseError = TJS_W( "Un - terminated string / regexp / octet literal" );
@@ -1079,7 +1080,6 @@ tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(tTJSScriptBlock *block)
 	TJSInitReservedWordsHashTable();
 
 	PrevToken = -1;
-	tjs_int len = (tjs_int)TJS_strlen(script);
 	IfLevel = 0;
 	PrevPos = 0;
 	NestLevel = 0;
@@ -1096,7 +1096,7 @@ tTJSLexicalAnalyzer::~tTJSLexicalAnalyzer()
 //---------------------------------------------------------------------------
 void tTJSLexicalAnalyzer::reset( const tjs_char *str, tjs_int length ) {
 	if( length > (ScriptWorkSize-1) ) {
-		ScriptWork.reset( tjs_char[length+1] );
+		ScriptWork.reset( new tjs_char[length+1] );
 		ScriptWorkSize = length + 1;
 	}
 	TJS_strncpy( ScriptWork.get(), str, length );
@@ -1121,7 +1121,7 @@ void tTJSLexicalAnalyzer::reset( const tjs_char *str, tjs_int length ) {
 /**
  * 行頭トークンを取得する
  */
-tjs_int LexicalAnalyzer::GetFirstToken(tjs_int &n) {
+Token tTJSLexicalAnalyzer::GetFirstToken(tjs_int &n) {
 	if(*Current == 0) return Token::EOL;
 
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
@@ -1150,14 +1150,14 @@ tjs_int LexicalAnalyzer::GetFirstToken(tjs_int &n) {
 	case TJS_W('9'): {	// number
 		const tjs_char* num = Current;
 		tjs_int val = TJSParseInteger( &num );
-		if( (*num) == TJS_W(".") ) {
+		if( (*num) == TJS_W('.') ) {
 			n = val;
 			num++;
 			Current = num;
-			return Token::SELECT
+			return Token::SELECT;
 		} else {
 			// 選択肢ではない通常の文字列
-			block_->WarningLog( TJS_W("行頭に数値が用いられましたが、'.'がないため選択肢として解釈されませんでした。") );
+			Block->WarningLog( TJS_W("行頭に数値が用いられましたが、'.'がないため選択肢として解釈されませんでした。") );
 			return GetTextToken(n);
 		}
 	}
@@ -1172,12 +1172,12 @@ void tTJSLexicalAnalyzer::PutChar( tjs_char c ) {
 ttstr tTJSLexicalAnalyzer::GetText() {
 	return ttstr( &TextBody[0], TextBody.size() );
 }
-tjs_int tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
+Token tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return pair.token;
+		return static_cast<Token>(pair.token);
 	}
 	if( TextBody.size() == 0 ) {
 		return Token::EOL;
@@ -1199,11 +1199,10 @@ tjs_int tTJSLexicalAnalyzer::ReadToChar( tjs_char end ) {
 	tjs_int result = -1;
 
 	while( true ) {
-		switch(*Current) {
-		case 0: // end of text
+		if( ( *Current ) == 0 ) { // end of text
 			ReturnText( result );
 			return result;
-		case end:
+		} else if( ( *Current ) == end ) {
 			if( TextBody.size() ) {
 				Current++;
 				ReturnText( result );
@@ -1220,12 +1219,12 @@ tjs_int tTJSLexicalAnalyzer::ReadToChar( tjs_char end ) {
 /**
  * 通常文をパースする
  */
-tjs_int tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
+Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return pair.token;
+		return static_cast<Token>(pair.token);
 	}
 	if(*Current == 0) return Token::EOL;
 
@@ -1278,12 +1277,12 @@ tjs_int tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 /**
  * ルビか文字装飾を行う中間部分
  */
-tjs_int tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
+Token tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return pair.token;
+		return static_cast<Token>(pair.token);
 	}
 	if(*Current == 0) return Token::EOL;
 
@@ -1309,7 +1308,7 @@ tjs_int tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 			Current++;
 			return Token::BEGIN_RUBY;
 
-		case TJS_W('《'):	// ルビ辞書を利用する
+		case TJS_W('》'):	// ルビ辞書を利用する
 			if( TextBody.size() ) return ReturnText( n );
 			Current++;
 			return Token::END_RUBY;
@@ -1348,12 +1347,12 @@ tjs_int tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 	// ここには来ないはず
 	return Token::EOL;
 }
-tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
+Token tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return pair.token;
+		return static_cast<Token>(pair.token);
 	}
 
 	if(!TJSSkipSpace(&Current)) return Token::EOL;	// skip space
@@ -1379,7 +1378,7 @@ tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 				return Token::OCTET;
 			}
 		}
-		TJS_1CHAR(LT);
+		TJS_1CHAR(Token::LT);
 
 	case TJS_W('='):
 		TJS_1CHAR(Token::EQUAL);
@@ -1502,7 +1501,7 @@ tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	case TJS_W('9'): {	// number
 		tTJSVariant v;
 		bool r = TJSParseNumber(v, &Current);
-		if(!r) TJS_eTJSCompileError(TJSNumberError, Block, (tjs_int)(Current-Script));
+		if(!r) Block->ErrorLog( TJSNumberError );
 		n=PutValue(v);
 		return Token::NUMBER;
 	}
@@ -1561,7 +1560,7 @@ tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	{
 		// not a reserved word
 		n = PutValue(str);
-		return SYMBOL;
+		return Token::SYMBOL;
 	}
 
 	switch(retnum)
@@ -1571,7 +1570,7 @@ tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 		return Token::NUMBER;
 	case T_NULL:
 		n = PutValue(tTJSVariant((iTJSDispatch2*)nullptr));
-		return CONSTVAL;
+		return Token::CONSTVAL;
 	case T_TRUE:
 		n = PutValue(tTJSVariant(true));
 		return Token::NUMBER;
@@ -1593,7 +1592,7 @@ tjs_int tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	  }
 	}
 
-	return retnum;
+	return static_cast<Token>(retnum);
 }
 tjs_int tTJSLexicalAnalyzer::GetToken(tjs_int &n)
 {
@@ -1832,7 +1831,7 @@ re_match:
 	  {
 		tTJSVariant v;
 		bool r = TJSParseNumber(v, &Current);
-		if(!r) TJS_eTJSCompileError(TJSNumberError, Block, (tjs_int)(Current-Script));
+		if(!r) Block->ErrorLog( TJSNumberError );
 		n=PutValue(v);
 		return T_CONSTVAL;
 	  }
@@ -1965,13 +1964,6 @@ tjs_int tTJSLexicalAnalyzer::GetNext(tjs_int &value)
 		First = false;
 		Current = Script;
 		PrevPos = 0;
-		if(ExprMode && ResultNeeded)
-		{
-			value = 0;
-			return T_RETURN;
-				// return T_RETURN first if 'expression' mode
-				// (and ResultNeeded is specified)
-		}
 	}
 
 	tjs_int n;
@@ -2076,7 +2068,7 @@ tjs_int tTJSLexicalAnalyzer::GetNext(tjs_int &value)
 			if(n == 0)
 			{
 				if(IfLevel != 0)
-					TJS_eTJSCompileError(TJSPPError, Block, (tjs_int)(Current-Script));
+					Block->ErrorLog( TJSPPError );
 			}
 		}
 	} while(n < 0);

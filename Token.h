@@ -169,7 +169,7 @@ enum class Token : int {
 	MINUS,			// -
 	ASTERISK,		// *
 	SLASH,			// /
-	BACKSLASH,		// \
+	BACKSLASH,		// \ 
 	PERCENT,		// %
 	CHEVRON,		// ^
 	LBRACKET,		// [
@@ -194,8 +194,6 @@ enum class Token : int {
 	T_FALSE,		// false
 	T_NULL,			// null
 	SYMBOL,			// 
-	CONSTVAL,		//
-
 };
 
 
