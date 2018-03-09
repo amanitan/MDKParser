@@ -1060,7 +1060,7 @@ static void TJSInitReservedWordsHashTable()
 static tjs_int TJSParseInteger( const tjs_char **ptr ) {
 	tjs_int v = 0;
 	tjs_int c = 0;
-	while( (c == TJSDecNum(**ptr)) > 0 ) {
+	while( (c = TJSDecNum(**ptr)) != -1 ) {
 		v *= 10;
 		v += c;
 		if(!TJSNext(ptr)) break;
@@ -1594,6 +1594,7 @@ Token tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 
 	return static_cast<Token>(retnum);
 }
+#if 0
 tjs_int tTJSLexicalAnalyzer::GetToken(tjs_int &n)
 {
 	// returns token, pointed by 'Current'
@@ -1931,6 +1932,7 @@ re_match:
 
 	return retnum;
 }
+#endif
 //---------------------------------------------------------------------------
 tjs_int tTJSLexicalAnalyzer::PutValue(const tTJSVariant &val)
 {
@@ -1954,6 +1956,7 @@ tjs_int tTJSLexicalAnalyzer::GetCurrentPosition()
 	return (tjs_int)(Current - Script);
 }
 //---------------------------------------------------------------------------
+#if 0
 tjs_int tTJSLexicalAnalyzer::GetNext(tjs_int &value)
 {
 	TJS_F_TRACE("tTJSLexicalAnalyzer::GetNext");
@@ -2076,6 +2079,7 @@ tjs_int tTJSLexicalAnalyzer::GetNext(tjs_int &value)
 	PrevToken = n;
 	return n;
 }
+#endif
 //---------------------------------------------------------------------------
 void tTJSLexicalAnalyzer::SetStartOfRegExp(void)
 {

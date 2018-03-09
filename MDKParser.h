@@ -7,7 +7,7 @@
 #include <windows.h>
 #endif
 #include "tp_stub.h"
-#include <vector>
+#include <memory>
 
 
 //---------------------------------------------------------------------------
@@ -17,8 +17,11 @@ class tTJSNI_MDKParser : public tTJSNativeInstance
 {
 	typedef tTJSNativeInstance inherited;
 
+	std::unique_ptr<class tTJSScriptBlock> Script;
+
 public:
 	tTJSNI_MDKParser();
+	virtual ~tTJSNI_MDKParser();
 	tjs_error TJS_INTF_METHOD Construct(tjs_int numparams, tTJSVariant **param, iTJSDispatch2 *tjs_obj);
 	void TJS_INTF_METHOD Invalidate();
 

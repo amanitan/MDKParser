@@ -4,6 +4,7 @@
 #include <windows.h>
 #endif
 #include "tp_stub.h"
+#include "MDKParser.h"
 
 #ifdef _WIN32
 #define DLL_EXPORT __declspec(dllexport)
@@ -14,13 +15,43 @@ typedef tjs_error HRESULT;
 #endif
 
 
+#define TJS_NATIVE_CLASSID_NAME ClassID_MDKParser
+static tjs_int32 TJS_NATIVE_CLASSID_NAME = -1;
 //---------------------------------------------------------------------------
 static iTJSNativeInstance * TJS_INTF_METHOD Create_NI_MDKParser() {
-	return nullptr;
+	return new tTJSNI_MDKParser();
 }
 //---------------------------------------------------------------------------
 iTJSDispatch2 * TVPCreateNativeClass_MDKParser() {
 	tTJSNativeClassForPlugin * classobj = TJSCreateNativeClassForPlugin(TJS_W("MDKParser"), Create_NI_MDKParser);
+
+	TJS_BEGIN_NATIVE_MEMBERS( MDKParser )
+	TJS_DECL_EMPTY_FINALIZE_METHOD
+
+	//----------------------------------------------------------------------
+	// constructor/methods
+	//----------------------------------------------------------------------
+	TJS_BEGIN_NATIVE_CONSTRUCTOR_DECL(/*var.name*/_this, /*var.type*/tTJSNI_MDKParser, /*TJS class name*/MDKParser ) {
+		return TJS_S_OK;
+	}
+	TJS_END_NATIVE_CONSTRUCTOR_DECL(/*TJS class name*/MDKParser )
+
+	//----------------------------------------------------------------------
+	TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/loadScenario ) {
+		TJS_GET_NATIVE_INSTANCE(/*var. name*/_this, /*var. type*/tTJSNI_MDKParser );
+		if( numparams < 1 ) return TJS_E_BADPARAMCOUNT;
+		if( result ) {
+			iTJSDispatch2* ret = _this->ParseMDKScenario( *param[0] );
+			*result = tTJSVariant( ret, ret );
+			ret->Release();
+		}
+		return TJS_S_OK;
+	}
+	TJS_END_NATIVE_METHOD_DECL(/*func. name*/loadScenario )
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+	TJS_END_NATIVE_MEMBERS
 	return classobj;
 }
 //---------------------------------------------------------------------------

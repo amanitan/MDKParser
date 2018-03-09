@@ -83,6 +83,7 @@ void tTJSScriptBlock::Initialize() {
 	__label_name = TJSMapGlobalStringMap(TJS_W("label"));
 	__select_name = TJSMapGlobalStringMap(TJS_W("select"));
 	__next_name = TJSMapGlobalStringMap(TJS_W("next"));
+	__selopt_name = TJSMapGlobalStringMap( TJS_W( "selopt" ) );
 
 	__attribute_name = TJSMapGlobalStringMap(TJS_W("attribute"));
 	__parameter_name = TJSMapGlobalStringMap(TJS_W("parameter"));
@@ -106,6 +107,8 @@ void tTJSScriptBlock::Initialize() {
 	__time_name = TJSMapGlobalStringMap(TJS_W("time"));
 	__wait_name = TJSMapGlobalStringMap(TJS_W("wait"));
 	__fade_name = TJSMapGlobalStringMap(TJS_W("fade"));
+
+	__lines_name = TJSMapGlobalStringMap( TJS_W( "lines" ) );
 }
 //---------------------------------------------------------------------------
 void tTJSScriptBlock::AddSignWord( tjs_char sign, const ttstr& word ) {
@@ -132,7 +135,7 @@ ttstr* tTJSScriptBlock::GetTagSignWord( Token token ) {
 	return nullptr;
 }
 //---------------------------------------------------------------------------
-tTJSScriptBlock::tTJSScriptBlock() : RefCount(1), LineOffset(0) {
+tTJSScriptBlock::tTJSScriptBlock() {
 	iTJSDispatch2* arrayClass = nullptr;
 	iTJSDispatch2* a = TJSCreateArrayObject( &arrayClass );
 	try {
@@ -154,20 +157,8 @@ tTJSScriptBlock::tTJSScriptBlock() : RefCount(1), LineOffset(0) {
 //---------------------------------------------------------------------------
 tTJSScriptBlock::~tTJSScriptBlock()
 {
+	LexicalAnalyzer.reset();
 	if(ArrayAddFunc) ArrayAddFunc->Release(), ArrayAddFunc = nullptr;
-}
-//---------------------------------------------------------------------------
-void tTJSScriptBlock::AddRef(void)
-{
-	RefCount ++;
-}
-//---------------------------------------------------------------------------
-void tTJSScriptBlock::Release(void)
-{
-	if(RefCount <= 1)
-		delete this;
-	else
-		RefCount--;
 }
 //---------------------------------------------------------------------------
 void tTJSScriptBlock::SetName(const tjs_char *name, tjs_int lineofs)
@@ -232,71 +223,6 @@ void tTJSScriptBlock::ConsoleOutput(const tjs_char *msg, void *data)
 	TVPAddLog( msg );
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::SetText(tTJSVariant *result, const tjs_char *text)
-{
-	TJS_F_TRACE("tTJSScriptBlock::SetText");
-
-	// compiles text and executes its global level scripts.
-	// the script will be compiled as an expression if isexpressn is true.
-	if(!text) return;
-	if(!text[0]) return;
-
-	TJS_D((TJS_W("Counting lines ...\n")))
-
-	Script.reset( new tjs_char[TJS_strlen(text)+1] );
-	TJS_strcpy(Script.get(), text);
-
-	LineVector.clear();
-	LineLengthVector.clear();
-
-	// calculation of line-count
-	tjs_char *script = Script.get();
-	tjs_char *ls = script;
-	tjs_char *p = script;
-	while(*p)
-	{
-		if(*p == TJS_W('\r') || *p == TJS_W('\n'))
-		{
-			LineVector.push_back(int(ls - script ));
-			LineLengthVector.push_back(int(p - ls));
-			if(*p == TJS_W('\r') && p[1] == TJS_W('\n')) p++;
-			p++;
-			ls = p;
-		}
-		else
-		{
-			p++;
-		}
-	}
-
-	if(p!=ls)
-	{
-		LineVector.push_back(int(ls - script ));
-		LineLengthVector.push_back(int(p - ls));
-	}
-
-	LineOffset = 0;
-	HasSelectLine = false;
-	LineAttribute = false;
-	MultiLineTag = false;
-	FirstError.Clear();
-	FirstErrorPos = 0;
-
-	if( ScenarioLines ) {
-		ScenarioLines->Release();
-		ScenarioLines = nullptr;
-	}
-	ScenarioLines = TJSCreateArrayObject();
-	CompileErrorCount = 0;
-	for( CurrentLine = 0; CurrentLine < LineVector.size(); CurrentLine++ ) {
-		ParseLine( CurrentLine );
-	}
-	if(CompileErrorCount)
-	{
-		TJS_eTJSCompileError(FirstError);
-	}
-}
-//---------------------------------------------------------------------------
 void tTJSScriptBlock::WarningLog( const tjs_char* message ) {
 	Log( LogType::Warning, message );
 }
@@ -327,6 +253,7 @@ void tTJSScriptBlock::Log( LogType type, const tjs_char* message ) {
 	}
 }
 //---------------------------------------------------------------------------
+/** 指定されたタイプ名の辞書を生成する。 */
 void tTJSScriptBlock::CreateCurrentDic( const tTJSVariantString& name ) {
 	if( CurrentDic ) {
 		CurrentDic->Release();
@@ -336,6 +263,7 @@ void tTJSScriptBlock::CreateCurrentDic( const tTJSVariantString& name ) {
 	CurrentDic->PropSetByVS( TJS_MEMBERENSURE, __type_name.AsVariantStringNoAddRef(), &tmp, CurrentDic );
 }
 //---------------------------------------------------------------------------
+/** 新たに辞書を生成する。 */
 void tTJSScriptBlock::CreateCurrentTagDic() {
 	if( CurrentDic ) {
 		CurrentDic->Release();
@@ -345,10 +273,12 @@ void tTJSScriptBlock::CreateCurrentTagDic() {
 	//CurrentDic->PropSetByVS( TJS_MEMBERENSURE, __type_name.AsVariantStringNoAddRef(), &tmp, CurrentDic );
 }
 //---------------------------------------------------------------------------
+/** ラベルとして新たに辞書を生成する。 */
 void tTJSScriptBlock::CreateCurrentLabelDic() {
 	CreateCurrentDic( *__label_name.AsVariantStringNoAddRef() );
 }
 //---------------------------------------------------------------------------
+/** 現在の辞書やタグに関連する要素をクリアする。 */
 void tTJSScriptBlock::CrearCurrentTag() {
 	if( CurrentAttributeDic ) {
 		CurrentAttributeDic->Release();
@@ -368,12 +298,24 @@ void tTJSScriptBlock::CrearCurrentTag() {
 	}
 }
 //---------------------------------------------------------------------------
+/** 現在の行に直接値を格納する。 */
 void tTJSScriptBlock::AddValueToLine( const tTJSVariant& val ) {
-	assert( CurrentCommandArray );
 	assert( ScenarioLines );
 	ScenarioLines->PropSetByNum( TJS_MEMBERENSURE, CurrentLine, &val, ScenarioLines );
 }
 //---------------------------------------------------------------------------
+/** 現在の行に配列の要素として指定された値を追加する。 */
+void tTJSScriptBlock::PushValueCurrentLine( const tTJSVariant& val ) {
+	if( !CurrentLineArray ) {
+		CurrentLineArray = TJSCreateArrayObject();
+		tTJSVariant val( CurrentLineArray, CurrentLineArray );
+		AddValueToLine( val );
+	}
+	tTJSVariant* param[] = { const_cast<tTJSVariant*>(&val) };
+	ArrayAddFunc->FuncCall( 0, nullptr, nullptr, nullptr, 1, param, CurrentLineArray );
+}
+//---------------------------------------------------------------------------
+/** 現在の辞書に名前を設定する。 */
 void tTJSScriptBlock::SetCurrentTagName( const ttstr& name ) {
 	if( !CurrentDic ) {
 		CurrentDic = TJSCreateDictionaryObject();
@@ -382,15 +324,18 @@ void tTJSScriptBlock::SetCurrentTagName( const ttstr& name ) {
 	CurrentDic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tmp, CurrentDic );
 }
 //---------------------------------------------------------------------------
+/** 現在の辞書をタグとして現在の行に追加する */
 void tTJSScriptBlock::PushCurrentTag() {
 	if( CurrentDic ) {
 		tTJSVariant tmp(CurrentDic, CurrentDic);
 		CurrentDic->Release();
 		CurrentDic = nullptr;
 		PushValueCurrentLine( tmp );
+		CrearCurrentTag();
 	}
 }
 //---------------------------------------------------------------------------
+/** 現在の辞書を現在の行に直接格納する。(ラベルに使用) */
 void tTJSScriptBlock::PushCurrentLabel() {
 	if( CurrentDic ) {
 		tTJSVariant tmp(CurrentDic, CurrentDic);
@@ -400,15 +345,18 @@ void tTJSScriptBlock::PushCurrentLabel() {
 	}
 }
 //---------------------------------------------------------------------------
+/** 指定された名前のタグを現在の行に追加する。 */
 void tTJSScriptBlock::PushNameTag( const ttstr& name ) {
 	SetCurrentTagName( name );
 	PushCurrentTag();
 }
 //---------------------------------------------------------------------------
+/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
 void tTJSScriptBlock::PushAttribute( const ttstr& name, const tTJSVariant& value, bool isparameter ) {
-	PushAttribute( name.AsVariantStringNoAddRef(), value, isparameter );
+	PushAttribute( *name.AsVariantStringNoAddRef(), value, isparameter );
 }
 //---------------------------------------------------------------------------
+/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
 void tTJSScriptBlock::PushAttribute( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter ) {
 	bool checkexist = true;
 	if( !CurrentDic ) {
@@ -447,6 +395,7 @@ void tTJSScriptBlock::PushAttribute( const tTJSVariantString& name, const tTJSVa
 	dest->PropSetByVS( TJS_MEMBERENSURE, const_cast<tTJSVariantString*>(&name), &value, dest );
 }
 //---------------------------------------------------------------------------
+/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に参照を設定する。 */
 void tTJSScriptBlock::PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter ) {
 	iTJSDispatch2* ref = TJSCreateDictionaryObject();
 	ref->PropSetByVS( TJS_MEMBERENSURE, __ref_name.AsVariantStringNoAddRef(), &value, ref );
@@ -455,6 +404,7 @@ void tTJSScriptBlock::PushAttributeReference( const tTJSVariantString& name, con
 	PushAttribute( name, tmp, isparameter );
 }
 //---------------------------------------------------------------------------
+/** 指定された名前で現在の辞書の属性(もしくはパラメータ)にファイルプロパティを設定する。 */
 void tTJSScriptBlock::PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter ) {
 	iTJSDispatch2* ref = TJSCreateDictionaryObject();
 	ref->PropSetByVS( TJS_MEMBERENSURE, __file_name.AsVariantStringNoAddRef(), &file, ref );
@@ -464,6 +414,7 @@ void tTJSScriptBlock::PushAttributeFileProperty( const tTJSVariantString& name, 
 	PushAttribute( name, tmp, isparameter );
 }
 //---------------------------------------------------------------------------
+/** 現在のタグにコマンドを追加する。 */
 void tTJSScriptBlock::PushTagCommand( const ttstr& name ) {
 	if( !CurrentDic ) {
 		CurrentDic = TJSCreateDictionaryObject();
@@ -479,15 +430,19 @@ void tTJSScriptBlock::PushTagCommand( const ttstr& name ) {
 	ArrayAddFunc->FuncCall( 0, nullptr, nullptr, nullptr, 1, &pval, CurrentCommandArray );
 }
 //---------------------------------------------------------------------------
+/*
 void tTJSScriptBlock::SetCurrentLabelName( const tTJSVariant& val ) {
 	SetValueToCurrentDic( __name_name, val );
 }
+*/
 //---------------------------------------------------------------------------
+/** 現在の辞書にラベル詳細として文字列を設定する */
 void tTJSScriptBlock::SetCurrentLabelDescription( const ttstr& desc ) {
 	tTJSVariant tmp( desc );
 	SetValueToCurrentDic( __description_name, tmp );
 }
 //---------------------------------------------------------------------------
+/** 現在の辞書に指定された名前で値を設定する */
 void tTJSScriptBlock::SetValueToCurrentDic( const ttstr& name, const tTJSVariant& val ) {
 	if( !CurrentDic ) {
 		CurrentDic = TJSCreateDictionaryObject();
@@ -495,11 +450,13 @@ void tTJSScriptBlock::SetValueToCurrentDic( const ttstr& name, const tTJSVariant
 	CurrentDic->PropSetByVS( TJS_MEMBERENSURE, name.AsVariantStringNoAddRef(), &val, CurrentDic );
 }
 //---------------------------------------------------------------------------
+/** 現在の辞書を現在の行に直接格納する。 */
 void tTJSScriptBlock::AddCurrentDicToLine() {
 	tTJSVariant tmp(CurrentDic,CurrentDic);
 	CurrentDic->Release();
 	CurrentDic = nullptr;
 	AddValueToLine( tmp );
+	CrearCurrentTag();
 }
 //---------------------------------------------------------------------------
 /**
@@ -748,6 +705,7 @@ void tTJSScriptBlock::ParseTag() {
 	} while(!findtagname);
 
 	ParseAttributes();
+	PushCurrentTag();
 }
 //---------------------------------------------------------------------------
 void tTJSScriptBlock::ParseAttributes() {
@@ -978,7 +936,7 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 		ParseTag();
 		return true;
 
-	// TODO ルビがまだ未対応
+		// TODO ルビがまだ未対応
 
 	default:
 		ErrorLog( TJS_W("不明な文法です。") );
@@ -997,13 +955,15 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
  * タグや属性は辞書型で
  */
 void tTJSScriptBlock::ParseLine( tjs_int line ) {
-	if( line < LineVector.size() ) {
+	if( static_cast<tjs_uint>(line) < LineVector.size() ) {
 		LineAttribute = false;
 
 		tjs_int length;
 		const tjs_char *str = GetLine( line, &length );
 		if( length == 0 ) {
 			// 改行のみ
+			tTJSVariant val( 0 );
+			AddValueToLine( val );
 		} else {
 			LexicalAnalyzer->reset( str, length );
 			tjs_int value;
@@ -1014,7 +974,10 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 				} else {
 					HasSelectLine = false;
 					// 選択肢オプション
-					// TODO 選択肢オプションを解析
+					SetCurrentTagName( __selopt_name );
+					LineAttribute = true;
+					ParseAttributes();
+					AddCurrentDicToLine();
 				}
 				return;
 			}
@@ -1024,13 +987,15 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 			case Token::BEGIN_TRANS:	// >>> 
 				// トランジション開始以降の文字列は無視し、begintransタグを格納するのみ
 				PushNameTag( __begintrans_name );
-				return;
+				break;
 			case Token::END_TRANS: {	// <<<
 				ParseTransition();
+				AddCurrentDicToLine();
 				break;
 				}
 			case Token::AT:	// @
 				ParseCharacter();
+				AddCurrentDicToLine();
 				break;
 			case Token::LABEL:	// # タグ
 				ParseLabel();
@@ -1048,23 +1013,76 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 				AddCurrentDicToLine();
 				break;
 			default:
-				if( ParseTag( token, value ) == false ) return;
+				while( ParseTag( token, value ) );
 				break;
 			}
-			// TODO parse tags
 		}
 	}
 }
 //---------------------------------------------------------------------------
-ttstr tTJSScriptBlock::GetNameInfo() const
-{
-	if(LineOffset == 0)
-	{
-		return ttstr(Name.get());
+iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
+	TJS_F_TRACE( "tTJSScriptBlock::ParseText" );
+
+	// compiles text and executes its global level scripts.
+	// the script will be compiled as an expression if isexpressn is true.
+	if( !text ) return nullptr;
+	if( !text[0] ) return nullptr;
+
+	TJS_D( ( TJS_W( "Counting lines ...\n" ) ) )
+
+		Script.reset( new tjs_char[TJS_strlen( text ) + 1] );
+	TJS_strcpy( Script.get(), text );
+
+	LineVector.clear();
+	LineLengthVector.clear();
+
+	// calculation of line-count
+	tjs_char *script = Script.get();
+	tjs_char *ls = script;
+	tjs_char *p = script;
+	while( *p ) {
+		if( *p == TJS_W( '\r' ) || *p == TJS_W( '\n' ) ) {
+			LineVector.push_back( int( ls - script ) );
+			LineLengthVector.push_back( int( p - ls ) );
+			if( *p == TJS_W( '\r' ) && p[1] == TJS_W( '\n' ) ) p++;
+			p++;
+			ls = p;
+		} else {
+			p++;
+		}
 	}
-	else
-	{
-		return ttstr(Name.get() ) + TJS_W("(line +") + ttstr(LineOffset) + TJS_W(")");
+
+	if( p != ls ) {
+		LineVector.push_back( int( ls - script ) );
+		LineLengthVector.push_back( int( p - ls ) );
 	}
+
+	LineOffset = 0;
+	HasSelectLine = false;
+	LineAttribute = false;
+	MultiLineTag = false;
+	FirstError.Clear();
+	FirstErrorPos = 0;
+
+	if( ScenarioLines ) {
+		ScenarioLines->Release();
+		ScenarioLines = nullptr;
+	}
+	ScenarioLines = TJSCreateArrayObject();
+	CompileErrorCount = 0;
+	for( CurrentLine = 0; static_cast<tjs_uint>(CurrentLine) < LineVector.size(); CurrentLine++ ) {
+		ParseLine( CurrentLine );
+	}
+	if( CompileErrorCount ) {
+		TJS_eTJSCompileError( FirstError );
+	}
+	iTJSDispatch2* retDic = TJSCreateDictionaryObject();
+	if( retDic ) {
+		tTJSVariant tmp( ScenarioLines, ScenarioLines );
+		retDic->PropSetByVS( TJS_MEMBERENSURE, __lines_name.AsVariantStringNoAddRef(), &tmp, retDic );
+		ScenarioLines->Release();
+		ScenarioLines = nullptr;
+	}
+	return retDic;
 }
 //---------------------------------------------------------------------------

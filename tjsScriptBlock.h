@@ -89,6 +89,7 @@ class tTJSScriptBlock
 	ttstr __label_name;
 	ttstr __select_name;
 	ttstr __next_name;
+	ttstr __selopt_name;
 
 	ttstr __attribute_name;
 	ttstr __parameter_name;
@@ -113,6 +114,8 @@ class tTJSScriptBlock
 	ttstr __wait_name;
 	ttstr __fade_name;
 
+	ttstr __lines_name;
+
 	enum class LogType {
 		Warning,
 		Error,
@@ -120,16 +123,16 @@ class tTJSScriptBlock
 
 	std::map<Token,ttstr>			TagCommandPair;
 	std::map<tjs_char,Token>		SignToToken;
+
 public:
 	tTJSScriptBlock();
 	virtual ~tTJSScriptBlock();
 
 private:
-	tjs_int RefCount;
 	std::unique_ptr<tjs_char[]> Script;
 	std::unique_ptr<tjs_char[]> Name;
-	tjs_int LineOffset;
-	tjs_int CurrentLine;
+	tjs_int LineOffset = 0;
+	tjs_int CurrentLine = 0;
 	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
 	bool MultiLineTag = false;
 	bool HasSelectLine = false;
@@ -140,6 +143,7 @@ private:
 	iTJSDispatch2* CurrentCommandArray = nullptr;
 
 	iTJSDispatch2* ScenarioLines = nullptr;
+	iTJSDispatch2* CurrentLineArray = nullptr;
 	iTJSDispatch2* ArrayAddFunc = nullptr;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
@@ -152,10 +156,6 @@ private:
 	tjs_int CompileErrorCount;
 
 public:
-
-	void AddRef();
-	void Release();
-
 	const tjs_char * GetLine(tjs_int line, tjs_int *linelength) const;
 	tjs_int SrcPosToLine(tjs_int pos) const;
 	tjs_int LineToSrcPos(tjs_int line) const;
@@ -168,7 +168,6 @@ public:
 
 	const tjs_char *GetName() const { return Name.get(); }
 	void SetName(const tjs_char *name, tjs_int lineofs);
-	ttstr GetNameInfo() const;
 
 	tjs_int GetLineOffset() const { return LineOffset; }
 
@@ -182,26 +181,46 @@ public:
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
 
+	/** 指定されたタイプ名の辞書を生成する。 */
 	void CreateCurrentDic( const tTJSVariantString& name );
-
+	/** 新たに辞書を生成する。 */
 	void CreateCurrentTagDic();
+	/** ラベルとして新たに辞書を生成する。 */
 	void CreateCurrentLabelDic();
+
+	/** 現在の辞書やタグに関連する要素をクリアする。 */
 	void CrearCurrentTag();
-	void SetCurrentTagName( const ttstr& name );
-	void SetCurrentLabelName( const tTJSVariant& val );
-	void SetValueToCurrentDic( const ttstr& name, const tTJSVariant& val );
-	void SetCurrentLabelDescription( const ttstr& desc );
-	void PushCurrentTag();
-	void PushCurrentLabel();
-	void PushNameTag( const ttstr& name );
-	void PushValueCurrentLine( const tTJSVariant& val );
+
+	/** 現在の行に直接値を格納する。 */
 	void AddValueToLine( const tTJSVariant& val );
-	void AddCurrentDicToLine();
-	void PushAttribute( const ttstr& name, const tTJSVariant& value, bool isparameter=false );
-	void PushAttribute( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter=false );
-	void PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter=false );
-	void PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter=false );
+
+	/** 現在の行に配列の要素として指定された値を追加する。 */
+	void PushValueCurrentLine( const tTJSVariant& val );
+	/** 現在の辞書に名前を設定する。 */
+	void SetCurrentTagName( const ttstr& name );
+	/** 現在の辞書をタグとして現在の行に追加する */
+	void PushCurrentTag();
+	/** 現在の辞書を現在の行に直接格納する。(ラベルに使用) */
+	void PushCurrentLabel();
+	/** 指定された名前のタグを現在の行に追加する。 */
+	void PushNameTag( const ttstr& name );
+	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
+	void PushAttribute( const ttstr& name, const tTJSVariant& value, bool isparameter = false );
+	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
+	void PushAttribute( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter = false );
+	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に参照を設定する。 */
+	void PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter = false );
+	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)にファイルプロパティを設定する。 */
+	void PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter = false );
+	/** 現在のタグにコマンドを追加する。 */
 	void PushTagCommand( const ttstr& name );
+	//void SetCurrentLabelName( const tTJSVariant& val );
+	/** 現在の辞書にラベル詳細として文字列を設定する */
+	void SetCurrentLabelDescription( const ttstr& desc );
+	/** 現在の辞書に指定された名前で値を設定する */
+	void SetValueToCurrentDic( const ttstr& name, const tTJSVariant& val );
+	/** 現在の辞書を現在の行に直接格納する。 */
+	void AddCurrentDicToLine();
 
 	void ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVariant& valueSymbol, bool isparameter=false );
 	void ParseAttribute( const tTJSVariant& symbol, bool isparameter=false );
@@ -218,7 +237,7 @@ private:
 
 	ttstr* GetTagSignWord( Token token );
 public:
-	void SetText(tTJSVariant *result, const tjs_char *text);
+	iTJSDispatch2* ParseText( const tjs_char* text );
 };
 //---------------------------------------------------------------------------
 

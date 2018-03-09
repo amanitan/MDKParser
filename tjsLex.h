@@ -121,15 +121,14 @@ private:
 
 	tjs_char *Script = nullptr;
 
-	tTJSSkipCommentResult SkipUntil_endif();
-	tTJSSkipCommentResult ProcessPPStatement();
+	//tTJSSkipCommentResult SkipUntil_endif();
+	//tTJSSkipCommentResult ProcessPPStatement();
 
-	tjs_int GetToken(tjs_int &value);
+	//tjs_int GetToken(tjs_int &value);
 
-	tjs_int32 ParsePPExpression(const tjs_char *start,
-		tjs_int n);
+	//tjs_int32 ParsePPExpression(const tjs_char *start, tjs_int n);
 
-	void PreProcess(void);
+	//void PreProcess(void);
 
 	std::vector<tTJSVariant *> Values;
 
