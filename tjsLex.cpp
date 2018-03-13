@@ -1126,6 +1126,8 @@ Token tTJSLexicalAnalyzer::GetFirstToken(tjs_int &n) {
 
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
 
+	while( *Current == TJS_W( '\t' ) );	// skip tab
+
 	switch(*Current)
 	{
 	case TJS_W('>'):
@@ -1137,6 +1139,19 @@ Token tTJSLexicalAnalyzer::GetFirstToken(tjs_int &n) {
 
 	case TJS_W('#'):
 		TJS_1CHAR(Token::LABEL);
+
+	case TJS_W('<'):
+		TJS_MATCH_S( "<<<", Token::END_TRANS );
+		TJS_MATCH_S( "<=", Token::BEGIN_FIX_NAME );
+		return GetTextToken( n );
+
+	case TJS_W('='):
+		if( Current[1] == TJS_W( '>' ) ) {
+			Current += 2;
+			return Token::END_FIX_NAME;
+		} else {
+			return GetTextToken( n );
+		}
 
 	case TJS_W('0'):
 	case TJS_W('1'):
@@ -1160,6 +1175,15 @@ Token tTJSLexicalAnalyzer::GetFirstToken(tjs_int &n) {
 			Block->WarningLog( TJS_W("行頭に数値が用いられましたが、'.'がないため選択肢として解釈されませんでした。") );
 			return GetTextToken(n);
 		}
+	}
+	case TJS_W( '/' ): {
+		if( Current[1] == TJS_W( '/' ) ) {
+			TJSSkipComment( &Current );
+			return Token::LINE_COMMENTS;
+		} else {
+			return GetTextToken( n );
+		}
+		break;
 	}
 	default:
 		return GetTextToken(n);
@@ -1216,6 +1240,33 @@ tjs_int tTJSLexicalAnalyzer::ReadToChar( tjs_char end ) {
 	// ここには来ないはず
 	return -1;
 }
+/* 指定文字までの文字列を読み取る。end文字が見付からない場合は-1を返す */
+tjs_int tTJSLexicalAnalyzer::ReadToCharStrict( tjs_char end ) {
+	if( *Current == 0 ) return -1;
+
+	PrevPos = (tjs_int)( Current - Script ); // remember current position as "PrevPos"
+	TextBody.clear();
+	const tjs_char* start = Current;
+	tjs_int result = -1;
+
+	while( true ) {
+		if( ( *Current ) == 0 ) { // end of text
+			TextBody.clear();
+			return -1;	// not found 'end'
+		} else if( ( *Current ) == end ) {
+			if( TextBody.size() ) {
+				Current++;
+				ReturnText( result );
+				return result;
+			}
+			return -1;
+		}
+		PutChar( *Current );
+		Current++;
+	}
+	// ここには来ないはず
+	return -1;
+}
 /**
  * 通常文をパースする
  */
@@ -1250,6 +1301,7 @@ Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 			Current++;
 			return Token::BEGIN_TAG;
 
+/*
 		case TJS_W('/'): {
 			if( Current[1] == TJS_W('/') ) {
 				if( TextBody.size() ) return ReturnText( n );
@@ -1258,6 +1310,7 @@ Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 			}
 			break;
 		}
+*/
 		case TJS_W('|'):
 			if( TextBody.size() ) return ReturnText( n );
 			Current++;
@@ -1267,6 +1320,21 @@ Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 			if( TextBody.size() ) return ReturnText( n );
 			Current++;
 			return Token::WAIT_RETURN;
+
+		case TJS_W( '《' ):
+			if( TextBody.size() ) return ReturnText( n );
+			Current++;
+			return Token::BEGIN_RUBY;
+
+		case TJS_W( '》' ):	// ルビ辞書を利用する
+			if( TextBody.size() ) return ReturnText( n );
+			Current++;
+			return Token::END_RUBY;
+
+		case TJS_W( '{' ):
+			if( TextBody.size() ) return ReturnText( n );
+			Current++;
+			return Token::BEGIN_TXT_DECORATION;
 		}
 		PutChar( *Current );
 		Current++;
@@ -1274,6 +1342,7 @@ Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 	// ここには来ないはず
 	return Token::EOL;
 }
+#if 0
 /**
  * ルビか文字装飾を行う中間部分
  */
@@ -1317,7 +1386,7 @@ Token tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 			if( TextBody.size() ) return ReturnText( n );
 			Current++;
 			return Token::BEGIN_TXT_DECORATION;
-
+/*
 		case TJS_W('/'): {
 			if( Current[1] == TJS_W('/') ) {
 				if( TextBody.size() ) return ReturnText( n );
@@ -1326,6 +1395,7 @@ Token tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 			}
 			break;
 		}
+*/
 		case TJS_W('|'):	// nest
 			if( TextBody.size() ) return ReturnText( n );
 			Current++;
@@ -1347,6 +1417,7 @@ Token tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 	// ここには来ないはず
 	return Token::EOL;
 }
+#endif
 Token tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();

@@ -15,6 +15,35 @@ static const tjs_char* TVPInternalError = TJS_W( "内部エラーが発生しま
 #define TVPThrowInternalError \
 	TVPThrowExceptionMessage(TVPInternalError, __FILE__,  __LINE__)
 
+template <typename TContainer>
+void split( const tjs_string& val, const tjs_char& delim, TContainer& result ) {
+	result.clear();
+	const tjs_string::size_type n = 1;
+	tjs_string::size_type pos = 0;
+	while( pos != tjs_string::npos ) {
+		tjs_string::size_type p = val.find( delim, pos );
+		if( p == tjs_string::npos ) {
+			if( pos >= ( val.size() - 1 ) ) {
+				if( val[pos] != delim ) {
+					result.push_back( val.substr( pos ) );
+				}
+			} else {
+				result.push_back( val.substr( pos ) );
+			}
+			break;
+		} else {
+			if( ( p - pos ) == 1 ) {
+				if( val[pos] != delim ) {
+					result.push_back( val.substr( pos ) );
+				}
+			} else {
+				result.push_back( val.substr( pos, p - pos ) );
+			}
+		}
+		pos = p + n;
+	}
+}
+
 static void TJSReportExceptionSource( const ttstr &msg ) {
 	//if( TJSEnableDebugMode )
 	{
@@ -109,6 +138,11 @@ void tTJSScriptBlock::Initialize() {
 	__fade_name = TJSMapGlobalStringMap(TJS_W("fade"));
 
 	__lines_name = TJSMapGlobalStringMap( TJS_W( "lines" ) );
+
+	__ruby_name = TJSMapGlobalStringMap( TJS_W( "ruby" ) );
+	__endruby_name = TJSMapGlobalStringMap( TJS_W( "endruby" ) );
+	__r_name = TJSMapGlobalStringMap( TJS_W( "r" ) );
+	__textstyle_name = TJSMapGlobalStringMap( TJS_W( "textstyle" ) );
 }
 //---------------------------------------------------------------------------
 void tTJSScriptBlock::AddSignWord( tjs_char sign, const ttstr& word ) {
@@ -295,6 +329,14 @@ void tTJSScriptBlock::CrearCurrentTag() {
 	if( CurrentDic ) {
 		CurrentDic->Release();
 		CurrentDic = nullptr;
+	}
+}
+//---------------------------------------------------------------------------
+/** ルビ/文字装飾用スタックをクリアする。 */
+void tTJSScriptBlock::ClearRubyDecorationStack() {
+	while( !RubyDecorationStack.empty() ) {
+		RubyDecorationStack.top()->Release();
+		RubyDecorationStack.pop();
 	}
 }
 //---------------------------------------------------------------------------
@@ -665,13 +707,21 @@ void tTJSScriptBlock::ParseTag() {
 	tjs_int value;
 	Token token = LexicalAnalyzer->GetInTagToken( value );
 	bool findtagname = false;
+	if( !FixTagName.IsEmpty() ) {
+		findtagname = true;
+		SetCurrentTagName( FixTagName );
+	}
 	do {
 		switch( token ) {
 		case Token::SYMBOL: {
-			const tTJSVariant& val = LexicalAnalyzer->GetValue(value);
-			ttstr name( val.AsStringNoAddRef() );
-			SetCurrentTagName( name );
-			findtagname = true;
+			if( FixTagName.IsEmpty() ) {
+				const tTJSVariant& val = LexicalAnalyzer->GetValue( value );
+				ttstr name( val.AsStringNoAddRef() );
+				SetCurrentTagName( name );
+				findtagname = true;
+			} else {
+				LexicalAnalyzer->Unlex( token, value );
+			}
 			break;
 		}
 
@@ -681,10 +731,12 @@ void tTJSScriptBlock::ParseTag() {
 			} else {
 				LineAttribute = false;
 			}
+			PushCurrentTag();
 			return;
 
 		case Token::RBRACKET:
 			MultiLineTag = false;
+			PushCurrentTag();
 			return;	// exit tag
 
 		default: {
@@ -728,8 +780,20 @@ void tTJSScriptBlock::ParseAttributes() {
 			break;
 
 		case Token::RBRACKET:	// ] タグ終了
+			if( TextAttribute ) {
+				ErrorLog( TJS_W( "文字装飾が']'で閉じられています。" ) );
+			}
 			MultiLineTag = false;
 			intag = false;
+			break;
+
+		case Token::RBRACE:	// }
+			if( TextAttribute ) {
+				MultiLineTag = false;
+				intag = false;
+			} else {
+				ErrorLog( TJS_W( "タグ内で解釈できない記号が用いられました。" ) );
+			}
 			break;
 
 		case Token::EOL:
@@ -926,6 +990,7 @@ void tTJSScriptBlock::ParseNextScenario() {
  */
 bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 	if( token == Token::EOL ) return false;
+	TextAttribute = false;
 
 	switch( token ) {
 	case Token::TEXT:
@@ -936,8 +1001,95 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 		ParseTag();
 		return true;
 
-		// TODO ルビがまだ未対応
+	case Token::VERTLINE: {	// ルビ or 文字装飾
+		iTJSDispatch2* dic = TJSCreateDictionaryObject();
+		RubyDecorationStack.push( dic );
+		tTJSVariant v( dic, dic );
+		PushValueCurrentLine( v );	// 空の辞書を追加しておく
+		return true;
+	}
+	case Token::BEGIN_RUBY: {	// 《が来たので、ルビ文字であるとみなす
+		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( '》') );
+		if( text >= 0 ) {
+			if( !RubyDecorationStack.empty() ) {
+				{	// rubyタグの内容を埋める
+					const tTJSVariant &v = LexicalAnalyzer->GetValue( text );
+					iTJSDispatch2* dic = RubyDecorationStack.top();
+					RubyDecorationStack.pop();
+					dic->PropSetByVS( TJS_MEMBERENSURE, __text_name.AsVariantStringNoAddRef(), &v, dic );
+					tTJSVariant tag( __ruby_name );
+					dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+				}
+				{	// [endruby]タグ追加
+					iTJSDispatch2* dic = TJSCreateDictionaryObject();
+					tTJSVariant val( dic, dic );
+					tTJSVariant tag( __endruby_name );
+					dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+					dic->Release();
+					PushValueCurrentLine( val );
+				}
+			} else {
+				ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
+			}
+		} else {
+			ErrorLog( TJS_W( "'《'の後に'》'がないため、ルビとして解釈できません。" ) );
+		}
+		return true;
+	}
+	case Token::END_RUBY: {	// ルビ辞書の可能性
+		if( !RubyDecorationStack.empty() ) {
+			{	// rubyタグの内容を埋める/ text属性がないrubyとして登録する、text属性がない場合は辞書から検索してもらう
+				iTJSDispatch2* dic = RubyDecorationStack.top();
+				RubyDecorationStack.pop();
+				tTJSVariant tag( __ruby_name );
+				dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+			}
+			{	// [endruby]タグ追加
+				iTJSDispatch2* dic = TJSCreateDictionaryObject();
+				tTJSVariant val( dic, dic );
+				tTJSVariant tag( __endruby_name );
+				dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+				dic->Release();
+				PushValueCurrentLine( val );
+			}
+		} else {
+			ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
+		}
+		return true;
+	}
+	case Token::BEGIN_TXT_DECORATION: {	// { が来たので、テキスト装飾であるとみなす
+		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( '}' ) );
+		if( text >= 0 ) {
+			if( !RubyDecorationStack.empty() ) {
+				iTJSDispatch2* dic = RubyDecorationStack.top();
+				RubyDecorationStack.pop();
+				assert( CurrentDic ); // null のはず
+				iTJSDispatch2* oldDic = CurrentDic;
+				CurrentDic = dic;
+				SetCurrentTagName( __textstyle_name );
+				TextAttribute = true;
+				ParseAttributes();
+				TextAttribute = false;
+				PushCurrentTag();
+				CurrentDic = oldDic;
+			} else {
+				ErrorLog( TJS_W( "'{'の前に'|'がないため、文字装飾として解釈できません。" ) );
+			}
+		} else {
+			ErrorLog( TJS_W( "'{'の後に'}'がないため、文字装飾として解釈できません。" ) );
+		}
+		return true;
+	}
 
+	case Token::WAIT_RETURN: {	// r タグ追加
+		iTJSDispatch2* dic = TJSCreateDictionaryObject();
+		tTJSVariant val( dic, dic );
+		tTJSVariant tag( __r_name );
+		dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+		dic->Release();
+		PushValueCurrentLine( val );
+		return true;
+	}
 	default:
 		ErrorLog( TJS_W("不明な文法です。") );
 		return false;
@@ -956,7 +1108,11 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
  */
 void tTJSScriptBlock::ParseLine( tjs_int line ) {
 	if( static_cast<tjs_uint>(line) < LineVector.size() ) {
+		CrearCurrentTag();
+		ClearRubyDecorationStack();
+
 		LineAttribute = false;
+		TextAttribute = false;
 
 		tjs_int length;
 		const tjs_char *str = GetLine( line, &length );
@@ -984,6 +1140,12 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 
 			// first token
 			switch( token ) {
+			case Token::EOL: {
+				// タブのみの行も空行と同じ
+				tTJSVariant val( 0 );
+				AddValueToLine( val );
+				break;
+			}
 			case Token::BEGIN_TRANS:	// >>> 
 				// トランジション開始以降の文字列は無視し、begintransタグを格納するのみ
 				PushNameTag( __begintrans_name );
@@ -1008,10 +1170,29 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 			case Token::NEXT_SCENARIO:	// >
 				ParseNextScenario();
 				break;
-			case Token::LINE_COMMENTS:
-				CreateCurrentDic( *__comment_name.AsVariantStringNoAddRef() );
-				AddCurrentDicToLine();
+			case Token::LINE_COMMENTS: {
+				//CreateCurrentDic( *__comment_name.AsVariantStringNoAddRef() );
+				//AddCurrentDicToLine();
+				tTJSVariant val;
+				AddValueToLine( val );	// void
 				break;
+			}
+			case Token::BEGIN_FIX_NAME: {
+				FixTagName.Clear();
+				tjs_int text = LexicalAnalyzer->ReadToSpace();
+				if( text >= 0 ) {
+					FixTagName = ttstr( LexicalAnalyzer->GetString( text ) );
+				}
+				tTJSVariant val;
+				AddValueToLine( val );	// void
+				break;
+			}
+			case Token::END_FIX_NAME: {
+				FixTagName.Clear();
+				tTJSVariant val;
+				AddValueToLine( val );	// void
+				break;
+			}
 			default:
 				while( ParseTag( token, value ) );
 				break;
@@ -1033,6 +1214,9 @@ iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
 		Script.reset( new tjs_char[TJS_strlen( text ) + 1] );
 	TJS_strcpy( Script.get(), text );
 
+	CrearCurrentTag();
+	ClearRubyDecorationStack();
+	FixTagName.Clear();
 	LineVector.clear();
 	LineLengthVector.clear();
 
@@ -1061,6 +1245,7 @@ iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
 	HasSelectLine = false;
 	LineAttribute = false;
 	MultiLineTag = false;
+	TextAttribute = false;
 	FirstError.Clear();
 	FirstErrorPos = 0;
 

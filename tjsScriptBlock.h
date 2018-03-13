@@ -27,6 +27,7 @@
 #include <list>
 #include <memory>
 #include <map>
+#include <stack>
 
 /**
  * tagは以下のような辞書形式で格納されている
@@ -67,9 +68,11 @@
 	cond : "flag == true",
 ]
  * コメントの時
-%[
-	type : "comment"
-]
+void
+
+行の意味番号
+void : コメント行/タグ名固定関係
+0 : 空行
  */
  
 //---------------------------------------------------------------------------
@@ -116,6 +119,11 @@ class tTJSScriptBlock
 
 	ttstr __lines_name;
 
+	ttstr __ruby_name;
+	ttstr __endruby_name;
+	ttstr __r_name;
+	ttstr __textstyle_name;
+
 	enum class LogType {
 		Warning,
 		Error,
@@ -136,6 +144,9 @@ private:
 	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
 	bool MultiLineTag = false;
 	bool HasSelectLine = false;
+	bool TextAttribute = false;		// {}内に記述された属性
+
+	ttstr FixTagName;
 
 	iTJSDispatch2* CurrentDic = nullptr; // DictionaryObject
 	iTJSDispatch2* CurrentAttributeDic = nullptr;
@@ -145,6 +156,8 @@ private:
 	iTJSDispatch2* ScenarioLines = nullptr;
 	iTJSDispatch2* CurrentLineArray = nullptr;
 	iTJSDispatch2* ArrayAddFunc = nullptr;
+
+	std::stack<iTJSDispatch2*> RubyDecorationStack;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
 
@@ -190,6 +203,8 @@ private:
 
 	/** 現在の辞書やタグに関連する要素をクリアする。 */
 	void CrearCurrentTag();
+	/** ルビ/文字装飾用スタックをクリアする。 */
+	void ClearRubyDecorationStack();
 
 	/** 現在の行に直接値を格納する。 */
 	void AddValueToLine( const tTJSVariant& val );

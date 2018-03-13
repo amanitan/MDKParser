@@ -158,8 +158,10 @@ public:
 	tjs_int ReadToVerline() { return ReadToChar( TJS_W('|')); }
 	/* スペースまでの文字列を読み取る */
 	tjs_int ReadToSpace() { return ReadToChar( TJS_W(' ')); }
-	/* 指定文字までの文字列を読み取る */
+	/* 指定文字までの文字列を読み取る。文字列の末尾まで読んでも見付からない場合は末尾までの文字列インデックスを返す */
 	tjs_int ReadToChar( tjs_char end );
+	/* 指定文字までの文字列を読み取る。end文字が見付からない場合は-1を返す */
+	tjs_int ReadToCharStrict( tjs_char end );
 
 	void Free(void);
 
@@ -175,7 +177,7 @@ public:
 	Token GetFirstToken( tjs_int &n );
 	Token ReturnText( tjs_int &n );
 	Token GetTextToken( tjs_int &n );
-	Token GetRubyDecorationToken( tjs_int &n );
+	//Token GetRubyDecorationToken( tjs_int &n );
 	Token GetInTagToken( tjs_int &n );
 };
 //---------------------------------------------------------------------------
