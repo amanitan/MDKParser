@@ -152,10 +152,11 @@ private:
 	ttstr FixTagName;
 
 	// tagに必要な要素をクラス化して、管理したほうが間違いが減るな……
-	iTJSDispatch2* CurrentDic = nullptr; // DictionaryObject
-	iTJSDispatch2* CurrentAttributeDic = nullptr;
-	iTJSDispatch2* CurrentParameterDic = nullptr;
-	iTJSDispatch2* CurrentCommandArray = nullptr;
+	std::unique_ptr<class Tag> CurrentTag;
+	//iTJSDispatch2* CurrentDic = nullptr; // DictionaryObject
+	//iTJSDispatch2* CurrentAttributeDic = nullptr;
+	//iTJSDispatch2* CurrentParameterDic = nullptr;
+	//iTJSDispatch2* CurrentCommandArray = nullptr;
 
 	iTJSDispatch2* ScenarioLines = nullptr;
 	iTJSDispatch2* CurrentLineArray = nullptr;
@@ -199,27 +200,21 @@ public:
 private:
 	static void ConsoleOutput(const tjs_char *msg, void *data);
 
-	/** 指定されたタイプ名の辞書を生成する。 */
-	void CreateCurrentDic( const tTJSVariantString& name );
-	/** 新たに辞書を生成する。 */
-	void CreateCurrentTagDic();
-	/** ラベルとして新たに辞書を生成する。 */
-	void CreateCurrentLabelDic();
-
-	/** 現在の辞書やタグに関連する要素をクリアする。 */
-	void ClearCurrentTag();
 	/** ルビ/文字装飾用スタックをクリアする。 */
 	void ClearRubyDecorationStack();
 
 	/** 現在の行に直接値を格納する。 */
-	void AddValueToLine( const tTJSVariant& val );
+	void SetValueToCurrentLine( const tTJSVariant& val );
+	/** 現在の行にタグを設定する。 */
+	void SetTagToCurrentLine( class Tag* tag );
 
+	/** 現在の行に配列の要素として指定されたタグを追加する。 */
+	void PushTagToCurrentLineArray( class Tag* tag );
 	/** 現在の行に配列の要素として指定された値を追加する。 */
 	void PushValueCurrentLine( const tTJSVariant& val );
 	/** 現在の行に配列の要素としてタグを直接追加する。 */
 	void PushDirectTagCurrentLine( const tTJSVariantString* name, const tTJSVariantString* attr = nullptr, const tTJSVariant* value = nullptr );
-	/** 現在の辞書に名前を設定する。 */
-	void SetCurrentTagName( const ttstr& name );
+
 	/** 現在の辞書をタグとして現在の行に追加する */
 	void PushCurrentTag();
 	/** 現在の辞書を現在の行に直接格納する。(ラベルに使用) */
@@ -234,9 +229,7 @@ private:
 	void PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter = false );
 	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)にファイルプロパティを設定する。 */
 	void PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter = false );
-	/** 現在のタグにコマンドを追加する。 */
-	void PushTagCommand( const ttstr& name );
-	//void SetCurrentLabelName( const tTJSVariant& val );
+
 	/** 現在の辞書にラベル詳細として文字列を設定する */
 	void SetCurrentLabelDescription( const ttstr& desc );
 	/** 現在の辞書に指定された名前で値を設定する */
