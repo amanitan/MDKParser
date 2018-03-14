@@ -45,8 +45,8 @@ inline bool TJS_iswalpha( tjs_char ch ) {
 	// the standard iswalpha misses when non-zero page code
 	if( ch & 0xff00 ) return true; else return 0 != ::isalpha( ch );
 }
-extern void TJS_eTJSCompileError( const ttstr & msg, class tTJSScriptBlock *block, tjs_int srcpos );
-extern void TJS_eTJSCompileError( const tjs_char *msg, class tTJSScriptBlock *block, tjs_int srcpos );
+//extern void TJS_eTJSCompileError( const ttstr & msg, class tTJSScriptBlock *block, tjs_int srcpos );
+//extern void TJS_eTJSCompileError( const tjs_char *msg, class tTJSScriptBlock *block, tjs_int srcpos );
 
 // Defining this enables quick-hack, avoiding the dictionary/array parser
 // memory overflow.
@@ -84,10 +84,10 @@ private:
 
 	struct tTokenPair
 	{
-		tjs_int token;
+		Token token;
 		tjs_int value;
 
-		tTokenPair(tjs_int token, tjs_int value)
+		tTokenPair( Token token, tjs_int value)
 		{
 			this->token = token;
 			this->value = value;
@@ -121,21 +121,9 @@ private:
 
 	tjs_char *Script = nullptr;
 
-	//tTJSSkipCommentResult SkipUntil_endif();
-	//tTJSSkipCommentResult ProcessPPStatement();
-
-	//tjs_int GetToken(tjs_int &value);
-
-	//tjs_int32 ParsePPExpression(const tjs_char *start, tjs_int n);
-
-	//void PreProcess(void);
-
 	std::vector<tTJSVariant *> Values;
 
 	tjs_int PutValue(const tTJSVariant &val);
-
-
-	tjs_int IfLevel; // @if nesting level
 
 	void PutChar( tjs_char c );
 	ttstr GetText();
@@ -147,7 +135,7 @@ public:
 	const tjs_char * GetString(tjs_int idx) const { return Values[idx]->GetString(); }
 
 	void Unlex( Token token, tjs_int value ) {
-		RetValDeque.push_back( tTokenPair((tjs_int)token,value) );
+		RetValDeque.push_back( tTokenPair(token,value) );
 	}
 	void Unlex() {
 		Current = Script + PrevPos;
@@ -169,7 +157,7 @@ public:
 
 	tjs_int GetCurrentPosition();
 
-	tjs_int GetNext(tjs_int &value);
+	//tjs_int GetNext(tjs_int &value);
 
 	void SetStartOfRegExp(void);
 	void SetNextIsBareWord();

@@ -1080,7 +1080,6 @@ tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(tTJSScriptBlock *block)
 	TJSInitReservedWordsHashTable();
 
 	PrevToken = -1;
-	IfLevel = 0;
 	PrevPos = 0;
 	NestLevel = 0;
 	First = true;
@@ -1201,7 +1200,7 @@ Token tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return static_cast<Token>(pair.token);
+		return pair.token;
 	}
 	if( TextBody.size() == 0 ) {
 		return Token::EOL;
@@ -1275,7 +1274,7 @@ Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return static_cast<Token>(pair.token);
+		return pair.token;
 	}
 	if(*Current == 0) return Token::EOL;
 
@@ -1335,7 +1334,20 @@ Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
 			if( TextBody.size() ) return ReturnText( n );
 			Current++;
 			return Token::BEGIN_TXT_DECORATION;
+
+		case TJS_W(':'):
+			if( Current[1] == TJS_W( '(' ) ) {
+				if( TextBody.size() ) return ReturnText( n );
+				Current+=2;
+				return Token::INNER_IMAGE;
+			} else {
+				if( TextBody.size() ) return ReturnText( n );
+				Current++;
+				return Token::COLON;
+			}
+			
 		}
+
 		PutChar( *Current );
 		Current++;
 	}
@@ -1351,7 +1363,7 @@ Token tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return static_cast<Token>(pair.token);
+		return pair.token;
 	}
 	if(*Current == 0) return Token::EOL;
 
@@ -1423,7 +1435,7 @@ Token tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
 		n = pair.value;
-		return static_cast<Token>(pair.token);
+		return pair.token;
 	}
 
 	if(!TJSSkipSpace(&Current)) return Token::EOL;	// skip space
@@ -2026,131 +2038,6 @@ tjs_int tTJSLexicalAnalyzer::GetCurrentPosition()
 {
 	return (tjs_int)(Current - Script);
 }
-//---------------------------------------------------------------------------
-#if 0
-tjs_int tTJSLexicalAnalyzer::GetNext(tjs_int &value)
-{
-	TJS_F_TRACE("tTJSLexicalAnalyzer::GetNext");
-
-	if(First)
-	{
-		TJS_D((TJS_W("pre-processing ...\n")))
-		First = false;
-		Current = Script;
-		PrevPos = 0;
-	}
-
-	tjs_int n;
-	value = 0;
-
-	do
-	{
-		if(RetValDeque.size())
-		{
-			tTokenPair pair = RetValDeque.front();
-			RetValDeque.pop_front();
-			value = pair.value;
-			PrevToken = pair.token;
-			return pair.token;
-		}
-
-		{
-			if(!EmbeddableExpressionDataStack.size())
-			{
-				// normal mode
-				TJSSkipSpace(&Current);
-				n = GetToken(value);
-			}
-			else
-			{
-				// embeddable expression mode
-				tEmbeddableExpressionData &data = EmbeddableExpressionDataStack.back();
-				switch(data.State)
-				{
-				case evsStart:
-					RetValDeque.push_back(tTokenPair(T_LPARENTHESIS, 0));
-					n = -1;
-					data.State = evsNextIsStringLiteral;
-					break;
-
-				case evsNextIsStringLiteral:
-				  {
-					tTJSVariant v;
-					tTJSInternalParseStringResult res =
-						//TJSInternalParseString(v, &Current, data.Delimiter, TJS_W('&'));
-						TJSInternalParseString(v, &Current, data.Delimiter, true );
-					if(res == psrDelimiter)
-					{
-						// embeddable expression mode ended
-						ttstr str(v);
-						if(!str.IsEmpty())
-						{
-							if(data.NeedPlus)
-								RetValDeque.push_back(tTokenPair(T_PLUS, 0));
-						}
-						if(!str.IsEmpty() || !data.NeedPlus)
-							RetValDeque.push_back(tTokenPair(T_CONSTVAL, PutValue(v)));
-						RetValDeque.push_back(tTokenPair(T_RPARENTHESIS, 0));
-						EmbeddableExpressionDataStack.pop_back();
-						n = -1;
-						break;
-					}
-					else
-					{
-						// *Current is next to ampersand mark or '${'
-						ttstr str(v);
-						if(!str.IsEmpty())
-						{
-							if(data.NeedPlus)
-								RetValDeque.push_back(tTokenPair(T_PLUS, 0));
-							RetValDeque.push_back(tTokenPair(T_CONSTVAL, PutValue(v)));
-							data.NeedPlus = true;
-						}
-						if(data.NeedPlus)
-							RetValDeque.push_back(tTokenPair(T_PLUS, 0));
-						RetValDeque.push_back(tTokenPair(T_STRING, 0));
-						RetValDeque.push_back(tTokenPair(T_LPARENTHESIS, 0));
-						data.State = evsNextIsExpression;
-						if(res == psrAmpersand)
-							data.WaitingToken = T_SEMICOLON;
-						else if(res == psrDollar)
-							data.WaitingToken = T_RBRACE, NestLevel++;
-						n = -1;
-						break;
-					}
-				  }
-
-				case evsNextIsExpression:
-				  {
-					TJSSkipSpace(&Current);
-					n = GetToken(value);
-
-					if(n == data.WaitingToken && NestLevel == data.WaitingNestLevel)
-					{
-						// end of embeddable expression mode
-						RetValDeque.push_back(tTokenPair(T_RPARENTHESIS, 0));
-						data.NeedPlus = true;
-						data.State = evsNextIsStringLiteral;
-						n = -1;
-					}
-
-					break;
-				  }
-				}
-			}
-
-			if(n == 0)
-			{
-				if(IfLevel != 0)
-					Block->ErrorLog( TJSPPError );
-			}
-		}
-	} while(n < 0);
-
-	PrevToken = n;
-	return n;
-}
-#endif
 //---------------------------------------------------------------------------
 void tTJSLexicalAnalyzer::SetStartOfRegExp(void)
 {

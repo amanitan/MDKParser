@@ -141,8 +141,10 @@ void tTJSScriptBlock::Initialize() {
 
 	__ruby_name = TJSMapGlobalStringMap( TJS_W( "ruby" ) );
 	__endruby_name = TJSMapGlobalStringMap( TJS_W( "endruby" ) );
-	__r_name = TJSMapGlobalStringMap( TJS_W( "r" ) );
+	__l_name = TJSMapGlobalStringMap( TJS_W( "l" ) );
 	__textstyle_name = TJSMapGlobalStringMap( TJS_W( "textstyle" ) );
+	__inlineimage_name = TJSMapGlobalStringMap( TJS_W( "inlineimage" ) );
+	__emoji_name = TJSMapGlobalStringMap( TJS_W( "emoji" ) );
 }
 //---------------------------------------------------------------------------
 void tTJSScriptBlock::AddSignWord( tjs_char sign, const ttstr& word ) {
@@ -313,7 +315,7 @@ void tTJSScriptBlock::CreateCurrentLabelDic() {
 }
 //---------------------------------------------------------------------------
 /** 現在の辞書やタグに関連する要素をクリアする。 */
-void tTJSScriptBlock::CrearCurrentTag() {
+void tTJSScriptBlock::ClearCurrentTag() {
 	if( CurrentAttributeDic ) {
 		CurrentAttributeDic->Release();
 		CurrentAttributeDic = nullptr;
@@ -357,6 +359,35 @@ void tTJSScriptBlock::PushValueCurrentLine( const tTJSVariant& val ) {
 	ArrayAddFunc->FuncCall( 0, nullptr, nullptr, nullptr, 1, param, CurrentLineArray );
 }
 //---------------------------------------------------------------------------
+/** 現在の行に配列の要素としてタグを直接追加する。 */
+void tTJSScriptBlock::PushDirectTagCurrentLine( const tTJSVariantString* name, const tTJSVariantString* attr , const tTJSVariant* value ) {
+	iTJSDispatch2* dic = TJSCreateDictionaryObject();
+	tTJSVariant val( dic, dic );
+	tTJSVariant tag( name );
+	dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+	if( value && attr ) {
+		// 値と属性名がある時は属性として追加する
+		iTJSDispatch2* attribute = TJSCreateDictionaryObject();
+		tTJSVariant tmp( attribute, attribute );
+		dic->PropSetByVS( TJS_MEMBERENSURE, __attribute_name.AsVariantStringNoAddRef(), &tmp, dic );
+		attribute->PropSetByVS( TJS_MEMBERENSURE, const_cast<tTJSVariantString*>(attr), value, attribute );
+		attribute->Release();
+	} else if( attr ) {
+		// 属性名のみがある時はコマンドとして追加する
+		iTJSDispatch2* command = TJSCreateArrayObject();
+		tTJSVariant tmp( command, command );
+		dic->PropSetByVS( TJS_MEMBERENSURE, __command_name.AsVariantStringNoAddRef(), &tmp, dic );
+
+		assert( ArrayAddFunc );
+		tTJSVariant value( attr );
+		tTJSVariant *pval = &value;
+		ArrayAddFunc->FuncCall( 0, nullptr, nullptr, nullptr, 1, &pval, command );
+		command->Release();
+	} /* else 属性名も値もない時は、タグとしてのみ追加する */
+	dic->Release();
+	PushValueCurrentLine( val );
+}
+//---------------------------------------------------------------------------
 /** 現在の辞書に名前を設定する。 */
 void tTJSScriptBlock::SetCurrentTagName( const ttstr& name ) {
 	if( !CurrentDic ) {
@@ -373,7 +404,7 @@ void tTJSScriptBlock::PushCurrentTag() {
 		CurrentDic->Release();
 		CurrentDic = nullptr;
 		PushValueCurrentLine( tmp );
-		CrearCurrentTag();
+		ClearCurrentTag();
 	}
 }
 //---------------------------------------------------------------------------
@@ -498,7 +529,7 @@ void tTJSScriptBlock::AddCurrentDicToLine() {
 	CurrentDic->Release();
 	CurrentDic = nullptr;
 	AddValueToLine( tmp );
-	CrearCurrentTag();
+	ClearCurrentTag();
 }
 //---------------------------------------------------------------------------
 /**
@@ -1020,14 +1051,8 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 					tTJSVariant tag( __ruby_name );
 					dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
 				}
-				{	// [endruby]タグ追加
-					iTJSDispatch2* dic = TJSCreateDictionaryObject();
-					tTJSVariant val( dic, dic );
-					tTJSVariant tag( __endruby_name );
-					dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
-					dic->Release();
-					PushValueCurrentLine( val );
-				}
+				// [endruby]タグ追加
+				PushDirectTagCurrentLine( __endruby_name.AsVariantStringNoAddRef() );
 			} else {
 				ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
 			}
@@ -1044,14 +1069,8 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 				tTJSVariant tag( __ruby_name );
 				dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
 			}
-			{	// [endruby]タグ追加
-				iTJSDispatch2* dic = TJSCreateDictionaryObject();
-				tTJSVariant val( dic, dic );
-				tTJSVariant tag( __endruby_name );
-				dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
-				dic->Release();
-				PushValueCurrentLine( val );
-			}
+			// [endruby]タグ追加
+			PushDirectTagCurrentLine( __endruby_name.AsVariantStringNoAddRef() );
 		} else {
 			ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
 		}
@@ -1081,15 +1100,31 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 		return true;
 	}
 
-	case Token::WAIT_RETURN: {	// r タグ追加
-		iTJSDispatch2* dic = TJSCreateDictionaryObject();
-		tTJSVariant val( dic, dic );
-		tTJSVariant tag( __r_name );
-		dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
-		dic->Release();
-		PushValueCurrentLine( val );
+	case Token::WAIT_RETURN: // l タグ追加
+		PushDirectTagCurrentLine( __l_name.AsVariantStringNoAddRef() );
+		return true;
+
+	case Token::INNER_IMAGE: {	// inlineimageタグ追加
+		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( ')' ) );
+		if( text >= 0 ) {
+			const tTJSVariant &v = LexicalAnalyzer->GetValue( text );
+			PushDirectTagCurrentLine( __inlineimage_name.AsVariantStringNoAddRef(), __storage_name.AsVariantStringNoAddRef(), &v );
+		} else {
+			ErrorLog( TJS_W( "':('の後に画像名がないか、')'がありません。" ) );
+		}
 		return true;
 	}
+	case Token::COLON: {	// emojiタグ追加
+		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( ':' ) );
+		if( text >= 0 ) {
+			const tTJSVariant &v = LexicalAnalyzer->GetValue( text );
+			PushDirectTagCurrentLine( __emoji_name.AsVariantStringNoAddRef(), __storage_name.AsVariantStringNoAddRef(), &v );
+		} else {
+			ErrorLog( TJS_W( "':'の後に絵文字名がないか、':'がありません。" ) );
+		}
+		return true;
+	}
+
 	default:
 		ErrorLog( TJS_W("不明な文法です。") );
 		return false;
@@ -1108,7 +1143,7 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
  */
 void tTJSScriptBlock::ParseLine( tjs_int line ) {
 	if( static_cast<tjs_uint>(line) < LineVector.size() ) {
-		CrearCurrentTag();
+		ClearCurrentTag();
 		ClearRubyDecorationStack();
 
 		LineAttribute = false;
@@ -1194,13 +1229,18 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 				break;
 			}
 			default:
-				while( ParseTag( token, value ) );
+				while( ParseTag( token, value ) ) {
+					token = LexicalAnalyzer->GetTextToken( value );
+				}
 				break;
 			}
 		}
 	}
 }
 //---------------------------------------------------------------------------
+/**
+ * 引数で渡された文字列を解析して、文字列として返す。
+ */
 iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
 	TJS_F_TRACE( "tTJSScriptBlock::ParseText" );
 
@@ -1211,10 +1251,11 @@ iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
 
 	TJS_D( ( TJS_W( "Counting lines ...\n" ) ) )
 
-		Script.reset( new tjs_char[TJS_strlen( text ) + 1] );
+	Script.reset( new tjs_char[TJS_strlen( text ) + 1] );
 	TJS_strcpy( Script.get(), text );
 
-	CrearCurrentTag();
+	LexicalAnalyzer->Free();
+	ClearCurrentTag();
 	ClearRubyDecorationStack();
 	FixTagName.Clear();
 	LineVector.clear();

@@ -157,6 +157,7 @@ enum class Token : int {
 	END_RUBY,		// 》
 	BEGIN_TXT_DECORATION,	// {
 	END_TXT_DECORATION,	// }
+	INNER_IMAGE,	// :(
 	
 	GT,		// >
 	CONSTVAL,

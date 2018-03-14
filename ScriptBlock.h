@@ -121,8 +121,10 @@ class tTJSScriptBlock
 
 	ttstr __ruby_name;
 	ttstr __endruby_name;
-	ttstr __r_name;
+	ttstr __l_name;
 	ttstr __textstyle_name;
+	ttstr __inlineimage_name;
+	ttstr __emoji_name;
 
 	enum class LogType {
 		Warning,
@@ -146,8 +148,10 @@ private:
 	bool HasSelectLine = false;
 	bool TextAttribute = false;		// {}内に記述された属性
 
+	// 現在設定されているタグ名、解除されるまでこの名前がタグ名として強制追加される
 	ttstr FixTagName;
 
+	// tagに必要な要素をクラス化して、管理したほうが間違いが減るな……
 	iTJSDispatch2* CurrentDic = nullptr; // DictionaryObject
 	iTJSDispatch2* CurrentAttributeDic = nullptr;
 	iTJSDispatch2* CurrentParameterDic = nullptr;
@@ -157,6 +161,7 @@ private:
 	iTJSDispatch2* CurrentLineArray = nullptr;
 	iTJSDispatch2* ArrayAddFunc = nullptr;
 
+	// ルビ/文字装飾ネスト用スタック
 	std::stack<iTJSDispatch2*> RubyDecorationStack;
 
 	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
@@ -202,7 +207,7 @@ private:
 	void CreateCurrentLabelDic();
 
 	/** 現在の辞書やタグに関連する要素をクリアする。 */
-	void CrearCurrentTag();
+	void ClearCurrentTag();
 	/** ルビ/文字装飾用スタックをクリアする。 */
 	void ClearRubyDecorationStack();
 
@@ -211,6 +216,8 @@ private:
 
 	/** 現在の行に配列の要素として指定された値を追加する。 */
 	void PushValueCurrentLine( const tTJSVariant& val );
+	/** 現在の行に配列の要素としてタグを直接追加する。 */
+	void PushDirectTagCurrentLine( const tTJSVariantString* name, const tTJSVariantString* attr = nullptr, const tTJSVariant* value = nullptr );
 	/** 現在の辞書に名前を設定する。 */
 	void SetCurrentTagName( const ttstr& name );
 	/** 現在の辞書をタグとして現在の行に追加する */
