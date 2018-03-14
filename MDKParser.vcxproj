@@ -174,16 +174,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\tp_stub.cpp" />
+    <ClCompile Include="LexicalAnalyzer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MDKParser.cpp" />
-    <ClCompile Include="tjsLex.cpp" />
-    <ClCompile Include="tjsScriptBlock.cpp" />
+    <ClCompile Include="ScriptBlock.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\tp_stub.h" />
+    <ClInclude Include="LexicalAnalyzer.h" />
     <ClInclude Include="MDKParser.h" />
-    <ClInclude Include="tjsLex.h" />
-    <ClInclude Include="tjsScriptBlock.h" />
+    <ClInclude Include="ScriptBlock.h" />
     <ClInclude Include="Token.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

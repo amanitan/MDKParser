@@ -8,7 +8,7 @@
 //---------------------------------------------------------------------------
 // Script Block Management
 //---------------------------------------------------------------------------
-#include "tjsScriptBlock.h"
+#include "ScriptBlock.h"
 #include <assert.h>
 
 static const tjs_char* TVPInternalError = TJS_W( "内部エラーが発生しました: at %1 line %2" );

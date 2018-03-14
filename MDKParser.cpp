@@ -1,7 +1,7 @@
 
 
 #include "MDKParser.h"
-#include "tjsScriptBlock.h"
+#include "ScriptBlock.h"
 
 //---------------------------------------------------------------------------
 tTJSNI_MDKParser::tTJSNI_MDKParser()

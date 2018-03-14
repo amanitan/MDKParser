@@ -22,7 +22,7 @@
 #include "tp_stub.h"
 #include "Token.h"
 
-#include "tjsLex.h"
+#include "LexicalAnalyzer.h"
 
 #include <list>
 #include <memory>

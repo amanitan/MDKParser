@@ -10,10 +10,10 @@
 //---------------------------------------------------------------------------
 
 
-#include "tjsLex.h"
+#include "LexicalAnalyzer.h"
 #include <math.h>
 #include <ctype.h>
-#include "tjsScriptBlock.h"
+#include "ScriptBlock.h"
 
 static const tjs_char* TJSUnclosedComment = TJS_W("Un-terminated comment");
 static const tjs_char* TJSStringParseError = TJS_W( "Un - terminated string / regexp / octet literal" );
