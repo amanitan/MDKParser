@@ -210,11 +210,11 @@ void Parser::PushAttribute( const tTJSVariantString* name, iTJSDispatch2* dic, b
 void Parser::PushAttribute( const tTJSVariantString* name, const tTJSVariant& value, bool isparameter ) {
 	if( isparameter ) {
 		if( CurrentTag->setParameter( name, value ) ) {
-			WarningLog( ( ttstr( name ) + ttstr( TJS_W( " パラメータが二重に追加されています。" ) ) ).c_str() );
+			WarningLog( ( ttstr( const_cast<tTJSVariantString*>(name) ) + ttstr( TJS_W( " パラメータが二重に追加されています。" ) ) ).c_str() );
 		}
 	} else {
 		if( CurrentTag->setAttribute( name, value ) ) {
-			WarningLog( ( ttstr( name ) + ttstr( TJS_W( " 属性が二重に追加されています。" ) ) ).c_str() );
+			WarningLog( ( ttstr( const_cast<tTJSVariantString*>(name) ) + ttstr( TJS_W( " 属性が二重に追加されています。" ) ) ).c_str() );
 		}
 	}
 }
@@ -573,11 +573,10 @@ void Parser::ParseTransition() {
 	if( token == Token::SYMBOL ) {
 		tjs_int v2;
 		Token t = Lex->GetInTagToken( v2 );
-		if( t == Token::EQUAL ) {	// <<< symbol=
-			Lex->Unlex( t, v2 );
-		} else {
+		if( t != Token::EQUAL ) {	// <<< symbol=
 			PushAttribute( GetRWord()->trans(), Lex->GetValue( value ) );
 		}
+		Lex->Unlex( t, v2 );
 	} else {
 		Lex->Unlex( token, value );
 	}

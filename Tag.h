@@ -162,7 +162,7 @@ public:
 	bool isExistAttribute( const tjs_char* name ) {
 		if( attribute_ ) {
 			tTJSVariant v;
-			tjs_error hr = attribute_->PropGet( 0, name, nullptr, &v, attribute_ );
+			tjs_error hr = attribute_->PropGet( TJS_MEMBERMUSTEXIST, name, nullptr, &v, attribute_ );
 			return ( hr != TJS_E_MEMBERNOTFOUND );
 		} else {
 			return false;
@@ -172,7 +172,7 @@ public:
 	bool isExistParameter( const tjs_char* name ) {
 		if( parameter_ ) {
 			tTJSVariant v;
-			tjs_error hr = parameter_->PropGet( 0, name, nullptr, &v, parameter_ );
+			tjs_error hr = parameter_->PropGet( TJS_MEMBERMUSTEXIST, name, nullptr, &v, parameter_ );
 			return ( hr != TJS_E_MEMBERNOTFOUND );
 		} else {
 			return false;
