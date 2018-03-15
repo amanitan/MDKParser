@@ -1072,7 +1072,7 @@ static tjs_int TJSParseInteger( const tjs_char **ptr ) {
 //---------------------------------------------------------------------------
 // tTJSLexicalAnalyzer
 //---------------------------------------------------------------------------
-tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(Parser *block)
+LexicalAnalyzer::LexicalAnalyzer(Parser *block)
  : ScriptWork(new tjs_char[1024]), ScriptWorkSize(1024), Block(block)
 {
 	// resneeded is valid only if exprmode is true
@@ -1088,12 +1088,12 @@ tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(Parser *block)
 	PutValue(tTJSVariant());
 }
 //---------------------------------------------------------------------------
-tTJSLexicalAnalyzer::~tTJSLexicalAnalyzer()
+LexicalAnalyzer::~LexicalAnalyzer()
 {
 	Free();
 }
 //---------------------------------------------------------------------------
-void tTJSLexicalAnalyzer::reset( const tjs_char *str, tjs_int length ) {
+void LexicalAnalyzer::reset( const tjs_char *str, tjs_int length ) {
 	if( length > (ScriptWorkSize-1) ) {
 		ScriptWork.reset( new tjs_char[length+1] );
 		ScriptWorkSize = length + 1;
@@ -1120,7 +1120,7 @@ void tTJSLexicalAnalyzer::reset( const tjs_char *str, tjs_int length ) {
 /**
  * 行頭トークンを取得する
  */
-Token tTJSLexicalAnalyzer::GetFirstToken(tjs_int &n) {
+Token LexicalAnalyzer::GetFirstToken(tjs_int &n) {
 	if(*Current == 0) return Token::EOL;
 
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
@@ -1189,13 +1189,13 @@ Token tTJSLexicalAnalyzer::GetFirstToken(tjs_int &n) {
 	}
 }
 
-void tTJSLexicalAnalyzer::PutChar( tjs_char c ) {
+void LexicalAnalyzer::PutChar( tjs_char c ) {
 	TextBody.push_back( c );
 }
-ttstr tTJSLexicalAnalyzer::GetText() {
+ttstr LexicalAnalyzer::GetText() {
 	return ttstr( &TextBody[0], TextBody.size() );
 }
-Token tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
+Token LexicalAnalyzer::ReturnText(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
@@ -1213,7 +1213,7 @@ Token tTJSLexicalAnalyzer::ReturnText(tjs_int &n) {
 /**
  * 指定文字まで読む
  */
-tjs_int tTJSLexicalAnalyzer::ReadToChar( tjs_char end ) {
+tjs_int LexicalAnalyzer::ReadToChar( tjs_char end ) {
 	if(*Current == 0) return -1;
 
 	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
@@ -1240,7 +1240,7 @@ tjs_int tTJSLexicalAnalyzer::ReadToChar( tjs_char end ) {
 	return -1;
 }
 /* 指定文字までの文字列を読み取る。end文字が見付からない場合は-1を返す */
-tjs_int tTJSLexicalAnalyzer::ReadToCharStrict( tjs_char end ) {
+tjs_int LexicalAnalyzer::ReadToCharStrict( tjs_char end ) {
 	if( *Current == 0 ) return -1;
 
 	PrevPos = (tjs_int)( Current - Script ); // remember current position as "PrevPos"
@@ -1269,7 +1269,7 @@ tjs_int tTJSLexicalAnalyzer::ReadToCharStrict( tjs_char end ) {
 /**
  * 通常文をパースする
  */
-Token tTJSLexicalAnalyzer::GetTextToken(tjs_int &n) {
+Token LexicalAnalyzer::GetTextToken(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
@@ -1430,7 +1430,7 @@ Token tTJSLexicalAnalyzer::GetRubyDecorationToken(tjs_int &n) {
 	return Token::EOL;
 }
 #endif
-Token tTJSLexicalAnalyzer::GetInTagToken(tjs_int &n) {
+Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	if( RetValDeque.size() ) {
 		tTokenPair pair = RetValDeque.front();
 		RetValDeque.pop_front();
@@ -2017,14 +2017,14 @@ re_match:
 }
 #endif
 //---------------------------------------------------------------------------
-tjs_int tTJSLexicalAnalyzer::PutValue(const tTJSVariant &val)
+tjs_int LexicalAnalyzer::PutValue(const tTJSVariant &val)
 {
 	tTJSVariant *v = new tTJSVariant(val);
 	Values.push_back(v);
 	return (tjs_int)(Values.size() -1);
 }
 //---------------------------------------------------------------------------
-void tTJSLexicalAnalyzer::Free(void)
+void LexicalAnalyzer::Free(void)
 {
 	std::vector<tTJSVariant*>::iterator i;
 	for(i = Values.begin(); i != Values.end(); i++)
@@ -2034,12 +2034,12 @@ void tTJSLexicalAnalyzer::Free(void)
 	Values.clear();
 }
 //---------------------------------------------------------------------------
-tjs_int tTJSLexicalAnalyzer::GetCurrentPosition()
+tjs_int LexicalAnalyzer::GetCurrentPosition()
 {
 	return (tjs_int)(Current - Script);
 }
 //---------------------------------------------------------------------------
-void tTJSLexicalAnalyzer::SetStartOfRegExp(void)
+void LexicalAnalyzer::SetStartOfRegExp(void)
 {
 	// notifies that a regular expression ( regexp ) 's
 	// first '/' ( that indicates the start of the regexp ) had been detected.
@@ -2048,7 +2048,7 @@ void tTJSLexicalAnalyzer::SetStartOfRegExp(void)
 	RegularExpression = true;
 }
 //---------------------------------------------------------------------------
-void tTJSLexicalAnalyzer::SetNextIsBareWord(void)
+void LexicalAnalyzer::SetNextIsBareWord(void)
 {
 	// notifies that the next word must be treated as a bare word
 	// (not a reserved word)

@@ -128,26 +128,16 @@ ttstr* Parser::GetTagSignWord( Token token ) {
 }
 //---------------------------------------------------------------------------
 Parser::Parser() {
-	LexicalAnalyzer.reset( new tTJSLexicalAnalyzer(this) );
+	Lex.reset( new LexicalAnalyzer(this) );
 }
 //---------------------------------------------------------------------------
 Parser::~Parser() {
-	LexicalAnalyzer.reset();
-}
-//---------------------------------------------------------------------------
-void Parser::SetName(const tjs_char *name, tjs_int lineofs)
-{
-	if( name ) {
-		LineOffset = lineofs;
-		Name.reset( new tjs_char[ TJS_strlen(name) + 1] );
-		TJS_strcpy(Name.get(), name);
-	}
+	Lex.reset();
 }
 //---------------------------------------------------------------------------
 const tjs_char * Parser::GetLine(tjs_int line, tjs_int *linelength) const
 {
 	// note that this function DOES matter LineOffset
-	line -= LineOffset;
 	if(linelength) *linelength = LineLengthVector[line];
 	return Script.get() + LineVector[line];
 }
@@ -158,7 +148,7 @@ tjs_int Parser::SrcPosToLine(tjs_int pos) const
 	tjs_uint e = (tjs_uint)LineVector.size();
 	while(true)
 	{
-		if(e-s <= 1) return s + LineOffset; // LineOffset is added
+		if(e-s <= 1) return s; // LineOffset is added
 		tjs_uint m = s + (e-s)/2;
 		if(LineVector[m] > pos)
 			e = m;
@@ -170,26 +160,7 @@ tjs_int Parser::SrcPosToLine(tjs_int pos) const
 tjs_int Parser::LineToSrcPos(tjs_int line) const
 {
 	// assumes line is added by LineOffset
-	line -= LineOffset;
 	return LineVector[line];
-}
-//---------------------------------------------------------------------------
-ttstr Parser::GetLineDescriptionString(tjs_int pos) const
-{
-	tjs_int line = SrcPosToLine(pos)+1;
-	ttstr name;
-	if( Name )
-	{
-		name = ttstr( Name.get() );
-	}
-	else
-	{
-		tjs_char ptr[128];
-		TJS_snprintf(ptr, sizeof(ptr)/sizeof(tjs_char), TJS_W("0x%p"), this);
-		name = ttstr(TJS_W("anonymous@")) + ptr;
-	}
-
-	return name + TJS_W("(") + ttstr(line) + TJS_W(")");
 }
 //---------------------------------------------------------------------------
 void Parser::ConsoleOutput(const tjs_char *msg, void *data)
@@ -217,14 +188,7 @@ void Parser::Log( LogType type, const tjs_char* message ) {
 		typemes = ttstr( TJS_W("error : ") );
 	}
 	tjs_int line = CurrentLine;
-	if( Name ) {
-		TVPAddLog( typemes + Name.get() + TJS_W("(") + ttstr(line) + TJS_W(")") );
-	} else {
-		tjs_char ptr[128];
-		TJS_snprintf(ptr, sizeof(ptr)/sizeof(tjs_char), TJS_W("0x%p"), this);
-		ttstr name = ttstr(TJS_W("anonymous@")) + ptr;
-		TVPAddLog( typemes + name + TJS_W("(") + ttstr(line) + TJS_W(")") );
-	}
+	TVPAddLog( typemes + TJS_W("(") + ttstr(line) + TJS_W(")") );
 }
 //---------------------------------------------------------------------------
 /** ルビ/文字装飾用スタックをクリアする。 */
@@ -283,24 +247,24 @@ void Parser::PushAttributeFileProperty( const tTJSVariantString& name, const tTJ
  */
 void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVariant& valueSymbol, bool isparameter ) {
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	if( token == Token::DOUBLE_COLON ) {
 		//ファイル属性として解釈する
 		const tTJSVariantString* filename = valueSymbol.AsStringNoAddRef();
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token == Token::SYMBOL ) {
-			ttstr prop( LexicalAnalyzer->GetValue( value ).AsStringNoAddRef() );
-			token = LexicalAnalyzer->GetInTagToken( value );
+			ttstr prop( Lex->GetValue( value ).AsStringNoAddRef() );
+			token = Lex->GetInTagToken( value );
 			while( token == Token::DOT ) {
 				prop += ttstr(TJS_W("."));
-				token = LexicalAnalyzer->GetInTagToken( value );
+				token = Lex->GetInTagToken( value );
 				if( token == Token::SYMBOL ) {
-					prop += ttstr( LexicalAnalyzer->GetValue( value ).AsStringNoAddRef() );
+					prop += ttstr( Lex->GetValue( value ).AsStringNoAddRef() );
 				} else {
 					ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定されたファイル属性の記述が間違っています。\".\"の後に文字列以外が来ています。")).c_str() );
 				}
 			}
-			LexicalAnalyzer->Unlex( token, value );
+			Lex->Unlex( token, value );
 			tTJSVariant file(filename);
 			tTJSVariant propvalue(prop);
 			PushAttributeFileProperty( *symbol.AsStringNoAddRef(), file, prop, isparameter );
@@ -311,36 +275,36 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 		// 参照かファイル属性のファイル名に拡張子が付いているかのどちらか
 		ttstr name( valueSymbol.AsStringNoAddRef() );
 		name += ttstr( TJS_W(".") );
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token == Token::SYMBOL ) {
 			// まずはどちらかわからないので両方のケースを考慮する
-			name += ttstr( LexicalAnalyzer->GetValue( value ).AsStringNoAddRef() );
-			token = LexicalAnalyzer->GetInTagToken( value );
+			name += ttstr( Lex->GetValue( value ).AsStringNoAddRef() );
+			token = Lex->GetInTagToken( value );
 			while( token == Token::DOT ) {
 				name += ttstr(TJS_W("."));
-				token = LexicalAnalyzer->GetInTagToken( value );
+				token = Lex->GetInTagToken( value );
 				if( token == Token::SYMBOL ) {
-					name += ttstr( LexicalAnalyzer->GetValue( value ).AsStringNoAddRef() );
+					name += ttstr( Lex->GetValue( value ).AsStringNoAddRef() );
 				} else {
 					ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定された参照の記述が間違っています。\".\"の後に文字列以外が来ています。")).c_str() );
 				}
 			}
 			if( token == Token::DOUBLE_COLON ) {
 				// ファイル属性だった
-				token = LexicalAnalyzer->GetInTagToken( value );
+				token = Lex->GetInTagToken( value );
 				if( token == Token::SYMBOL ) {
-					ttstr prop( LexicalAnalyzer->GetValue( value ).AsStringNoAddRef() );
-					token = LexicalAnalyzer->GetInTagToken( value );
+					ttstr prop( Lex->GetValue( value ).AsStringNoAddRef() );
+					token = Lex->GetInTagToken( value );
 					while( token == Token::DOT ) {
 						prop += ttstr(TJS_W("."));
-						token = LexicalAnalyzer->GetInTagToken( value );
+						token = Lex->GetInTagToken( value );
 						if( token == Token::SYMBOL ) {
-							prop += ttstr( LexicalAnalyzer->GetValue( value ).AsStringNoAddRef() );
+							prop += ttstr( Lex->GetValue( value ).AsStringNoAddRef() );
 						} else {
 							ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定されたファイル属性の記述が間違っています。\".\"の後に文字列以外が来ています。")).c_str() );
 						}
 					}
-					LexicalAnalyzer->Unlex( token, value );
+					Lex->Unlex( token, value );
 					tTJSVariant file(name);
 					tTJSVariant propvalue(prop);
 					PushAttributeFileProperty( *symbol.AsStringNoAddRef(), file, prop, isparameter );
@@ -349,7 +313,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 				}
 			} else {
 				// 参照だった
-				LexicalAnalyzer->Unlex( token, value );
+				Lex->Unlex( token, value );
 				tTJSVariant ref(name);
 				PushAttributeReference( *symbol.AsStringNoAddRef(), ref, isparameter );
 			}
@@ -359,30 +323,30 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 	} else {
 		// . も :: もない場合は、変数参照であるとして登録する。
 		PushAttributeReference( *symbol.AsStringNoAddRef(), valueSymbol );
-		LexicalAnalyzer->Unlex( token, value );
+		Lex->Unlex( token, value );
 	}
 }
 //---------------------------------------------------------------------------
 void Parser::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	if( token == Token::EQUAL ) {
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		switch( token ) {
 		case Token::CONSTVAL:
 		case Token::SINGLE_TEXT:
 		case Token::DOUBLE_TEXT:
 		case Token::NUMBER:
 		case Token::OCTET: {
-			const tTJSVariant& v = LexicalAnalyzer->GetValue(value);
+			const tTJSVariant& v = Lex->GetValue(value);
 			PushAttribute( symbol.AsStringNoAddRef(), v, isparameter );
 			}
 			break;
 		case Token::PLUS: {
 			tjs_int v2;
-			Token t = LexicalAnalyzer->GetInTagToken( v2 );
+			Token t = Lex->GetInTagToken( v2 );
 			if( t == Token::NUMBER ) {
-				const tTJSVariant& v = LexicalAnalyzer->GetValue( v2 );
+				const tTJSVariant& v = Lex->GetValue( v2 );
 				PushAttribute( symbol.AsStringNoAddRef(), v, isparameter );
 			} else {
 				ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に\"+\"数値以外が指定されました。数値として解釈できません。")).c_str() );
@@ -391,9 +355,9 @@ void Parser::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
 			break;
 		case Token::MINUS: {
 			tjs_int v2;
-			Token t = LexicalAnalyzer->GetInTagToken( v2 );
+			Token t = Lex->GetInTagToken( v2 );
 			if( t == Token::NUMBER ) {
-				tTJSVariant m(LexicalAnalyzer->GetValue( v2 ));
+				tTJSVariant m(Lex->GetValue( v2 ));
 				m.changesign();
 				PushAttribute( symbol.AsStringNoAddRef(), m, isparameter );
 			} else {
@@ -402,7 +366,7 @@ void Parser::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
 			}
 			break;
 		case Token::SYMBOL:	// TJS2 value or file prop
-			ParseAttributeValueSymbol( symbol, LexicalAnalyzer->GetValue(value), isparameter );
+			ParseAttributeValueSymbol( symbol, Lex->GetValue(value), isparameter );
 			break;
 		}
 	} else {
@@ -412,59 +376,59 @@ void Parser::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
 			tTJSVariant v(nullptr,nullptr);	// null
 			PushAttribute( symbol.AsStringNoAddRef(), v, isparameter );
 		}
-		LexicalAnalyzer->Unlex( token, value );
+		Lex->Unlex( token, value );
 	}
 }
 //---------------------------------------------------------------------------
 bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 	switch( token ) {
 	case Token::SINGLE_TEXT: {
-		const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
+		const tTJSVariant& v = Lex->GetValue( value );
 		PushAttribute( GetRWord()->voice(), v );
 		return true;
 	}
 	case Token::DOUBLE_TEXT: {
-		const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
+		const tTJSVariant& v = Lex->GetValue( value );
 		PushAttribute( GetRWord()->storage(), v );
 		return true;
 	}
 	case Token::LT:
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token == Token::NUMBER ) {
-			const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
+			const tTJSVariant& v = Lex->GetValue( value );
 			PushAttribute( GetRWord()->time(), v );
 		} else {
 			ErrorLog( TJS_W("タグ内で'<'の後数値以外が指定されています。") );
 		}
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token != Token::GT ) {
 			ErrorLog( TJS_W("タグ内で'<'の後'>'で閉じられていません。") );
 		}
 		return true;
 
 	case Token::LBRACE:
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token == Token::NUMBER ) {
-			const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
+			const tTJSVariant& v = Lex->GetValue( value );
 			PushAttribute( GetRWord()->wait(), v );
 		} else {
 			ErrorLog( TJS_W("タグ内で'{'の後数値以外が指定されています。") );
 		}
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token != Token::RBRACE ) {
 			ErrorLog( TJS_W("タグ内で'{'の後'}'で閉じられていません。") );
 		}
 		return true;
 
 	case Token::LPARENTHESIS:
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token == Token::NUMBER ) {
-			const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
+			const tTJSVariant& v = Lex->GetValue( value );
 			PushAttribute( GetRWord()->fade(), v );
 		} else {
 			ErrorLog( TJS_W("タグ内で'('の後数値以外が指定されています。") );
 		}
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token != Token::RPARENTHESIS ) {
 			ErrorLog( TJS_W("タグ内で'('の後')'で閉じられていません。") );
 		}
@@ -478,7 +442,7 @@ bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 //---------------------------------------------------------------------------
 void Parser::ParseTag() {
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	bool findtagname = false;
 	if( !FixTagName.IsEmpty() ) {
 		findtagname = true;
@@ -488,12 +452,12 @@ void Parser::ParseTag() {
 		switch( token ) {
 		case Token::SYMBOL: {
 			if( FixTagName.IsEmpty() ) {
-				const tTJSVariant& val = LexicalAnalyzer->GetValue( value );
+				const tTJSVariant& val = Lex->GetValue( value );
 				ttstr name( val.AsStringNoAddRef() );
 				CurrentTag->setTagName( name.AsVariantStringNoAddRef() );
 				findtagname = true;
 			} else {
-				LexicalAnalyzer->Unlex( token, value );
+				Lex->Unlex( token, value );
 			}
 			break;
 		}
@@ -538,18 +502,18 @@ void Parser::ParseTag() {
 //---------------------------------------------------------------------------
 void Parser::ParseAttributes() {
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	bool intag = true;
 	do {
 		switch( token ) {
 		case Token::SYMBOL:
-			ParseAttribute( LexicalAnalyzer->GetValue(value) );
+			ParseAttribute( Lex->GetValue(value) );
 			break;
 
 		case Token::DOLLAR:	// パラメータとして解釈
-			token = LexicalAnalyzer->GetInTagToken( value );
+			token = Lex->GetInTagToken( value );
 			if( token == Token::SYMBOL ) {
-				ParseAttribute( LexicalAnalyzer->GetValue(value), true );
+				ParseAttribute( Lex->GetValue(value), true );
 			} else {
 				ErrorLog( TJS_W("タグ内で$の後にパラメータ名として解釈できない文字が用いられました。") );
 			}
@@ -599,17 +563,17 @@ void Parser::ParseTransition() {
 
 	LineAttribute = true;
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	if( token == Token::SYMBOL ) {
 		tjs_int v2;
-		Token t = LexicalAnalyzer->GetInTagToken( v2 );
+		Token t = Lex->GetInTagToken( v2 );
 		if( t == Token::EQUAL ) {	// <<< symbol=
-			LexicalAnalyzer->Unlex( t, v2 );
+			Lex->Unlex( t, v2 );
 		} else {
-			PushAttribute( GetRWord()->trans(), LexicalAnalyzer->GetValue( value ) );
+			PushAttribute( GetRWord()->trans(), Lex->GetValue( value ) );
 		}
 	} else {
-		LexicalAnalyzer->Unlex( token, value );
+		Lex->Unlex( token, value );
 	}
 	ParseAttributes();
 
@@ -627,22 +591,22 @@ void Parser::ParseCharacter() {
 	CurrentTag->setTagName( GetRWord()->charname() );
 
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	if( token == Token::SYMBOL ) {
-		PushAttribute( GetRWord()->name(), LexicalAnalyzer->GetValue( value ) );
-		token = LexicalAnalyzer->GetInTagToken( value );
+		PushAttribute( GetRWord()->name(), Lex->GetValue( value ) );
+		token = Lex->GetInTagToken( value );
 		if( token == Token::SLASH ) {
 			// 代替表示名指定
-			token = LexicalAnalyzer->GetInTagToken( value );
+			token = Lex->GetInTagToken( value );
 			if( token == Token::SYMBOL || token == Token::SINGLE_TEXT || token == Token::DOUBLE_TEXT ) {
-				PushAttribute( GetRWord()->alias(), LexicalAnalyzer->GetValue( value ) );
+				PushAttribute( GetRWord()->alias(), Lex->GetValue( value ) );
 			} else {
 				tTJSVariant voidvar;
 				PushAttribute( GetRWord()->alias(), voidvar );	// alias に空文字指定
-				LexicalAnalyzer->Unlex( token, value );
+				Lex->Unlex( token, value );
 			}
 		} else {
-			LexicalAnalyzer->Unlex( token, value );
+			Lex->Unlex( token, value );
 		}
 		LineAttribute = true;
 		ParseAttributes();
@@ -662,14 +626,14 @@ void Parser::ParseLabel() {
 	CurrentTag->setTypeName( GetRWord()->label() );
 
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	if( token == Token::SYMBOL || token == Token::VERTLINE ) {
 		if( token == Token::SYMBOL ) {
-			const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
-			token = LexicalAnalyzer->GetInTagToken( value );
+			const tTJSVariant& v = Lex->GetValue( value );
+			token = Lex->GetInTagToken( value );
 		}
 		if( token == Token::VERTLINE ) {
-			ttstr desc = LexicalAnalyzer->GetRemainString();
+			ttstr desc = Lex->GetRemainString();
 			if( desc.GetLen() > 0 ) {
 				CurrentTag->setText( GetRWord()->description(), desc );
 			}
@@ -697,32 +661,32 @@ void Parser::ParseSelect( tjs_int number ) {
 	CurrentTag->setTypeName( GetRWord()->select() );
 
 	tjs_int value;
-	Token token = LexicalAnalyzer->GetInTagToken( value );
+	Token token = Lex->GetInTagToken( value );
 	if( token == Token::ASTERISK ) {
 		// * の時は、nullを入れてtargetのラベル参照
 		tTJSVariant v(nullptr,nullptr);
 		CurrentTag->setValue( GetRWord()->text(), v );
-		token = LexicalAnalyzer->GetInTagToken( value );
+		token = Lex->GetInTagToken( value );
 		if( token != Token::VERTLINE ) {
 			ErrorLog( TJS_W("選択肢で*の後に|がありません。") );
 		}
 	} else if( token == Token::VERTLINE ) {
 		// | の時は、次の|までを画像ファイル名として読み込む
-		tjs_int text = LexicalAnalyzer->ReadToVerline();
+		tjs_int text = Lex->ReadToVerline();
 		if( text >= 0 ) {
-			CurrentTag->setValue( GetRWord()->image(), LexicalAnalyzer->GetValue( text ) );
+			CurrentTag->setValue( GetRWord()->image(), Lex->GetValue( text ) );
 		}
 	} else {
 		// それ以外の時は、|までを表示するテキストとして解釈する
-		LexicalAnalyzer->Unlex();
-		tjs_int text = LexicalAnalyzer->ReadToVerline();
+		Lex->Unlex();
+		tjs_int text = Lex->ReadToVerline();
 		if( text >= 0 ) {
-			CurrentTag->setValue( GetRWord()->text(), LexicalAnalyzer->GetValue( text ) );
+			CurrentTag->setValue( GetRWord()->text(), Lex->GetValue( text ) );
 		}
 	}
-	tjs_int text = LexicalAnalyzer->ReadToVerline();
+	tjs_int text = Lex->ReadToVerline();
 	if( text >= 0 ) {
-		CurrentTag->setValue( GetRWord()->target(), LexicalAnalyzer->GetValue( text ) );
+		CurrentTag->setValue( GetRWord()->target(), Lex->GetValue( text ) );
 	}
 	// それ以降は属性として読み込む
 	LineAttribute = true;
@@ -743,18 +707,18 @@ void Parser::ParseNextScenario() {
 	CurrentTag->release();
 	CurrentTag->setTypeName( GetRWord()->next() );
 
-	tjs_int text = LexicalAnalyzer->ReadToSpace();
+	tjs_int text = Lex->ReadToSpace();
 	if( text >= 0 ) {
-		CurrentTag->setValue( GetRWord()->target(), LexicalAnalyzer->GetValue( text ) );
+		CurrentTag->setValue( GetRWord()->target(), Lex->GetValue( text ) );
 	}
-	text = LexicalAnalyzer->ReadToSpace();
+	text = Lex->ReadToSpace();
 	if( text >= 0 ) {
-		const tTJSVariant& v = LexicalAnalyzer->GetValue( text );
+		const tTJSVariant& v = Lex->GetValue( text );
 		tTJSVariantString* vs = v.AsStringNoAddRef();
 		if( GetRWord()->if_ == ttstr(vs) ) {
-			text = LexicalAnalyzer->ReadToSpace();
+			text = Lex->ReadToSpace();
 			if( text >= 0 ) {
-				CurrentTag->setValue( GetRWord()->cond(), LexicalAnalyzer->GetValue( text ) );
+				CurrentTag->setValue( GetRWord()->cond(), Lex->GetValue( text ) );
 			} else {
 				ErrorLog( TJS_W(">の後のifに続く条件式がありません。") );
 			}
@@ -774,7 +738,7 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 
 	switch( token ) {
 	case Token::TEXT:
-		Scenario->addValueToCurrentLine( LexicalAnalyzer->GetValue( value ) );
+		Scenario->addValueToCurrentLine( Lex->GetValue( value ) );
 		return true;
 
 	case Token::BEGIN_TAG:
@@ -789,11 +753,11 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 		return true;
 	}
 	case Token::BEGIN_RUBY: {	// 《が来たので、ルビ文字であるとみなす
-		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( '》') );
+		int text = Lex->ReadToCharStrict( TJS_W( '》') );
 		if( text >= 0 ) {
 			if( !RubyDecorationStack.empty() ) {
 				{	// rubyタグの内容を埋める
-					const tTJSVariant &v = LexicalAnalyzer->GetValue( text );
+					const tTJSVariant &v = Lex->GetValue( text );
 					iTJSDispatch2* dic = RubyDecorationStack.top();
 					RubyDecorationStack.pop();
 					dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->text(), &v, dic );
@@ -828,7 +792,7 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 		return true;
 	}
 	case Token::BEGIN_TXT_DECORATION: {	// { が来たので、テキスト装飾であるとみなす
-		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( '}' ) );
+		int text = Lex->ReadToCharStrict( TJS_W( '}' ) );
 		if( text >= 0 ) {
 			if( !RubyDecorationStack.empty() ) {
 				iTJSDispatch2* dic = RubyDecorationStack.top();
@@ -858,10 +822,10 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 	}
 
 	case Token::INNER_IMAGE: {	// inlineimageタグ追加
-		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( ')' ) );
+		int text = Lex->ReadToCharStrict( TJS_W( ')' ) );
 		if( text >= 0 ) {
 			Tag tag( GetRWord()->inlineimage() );
-			tag.setAttribute( GetRWord()->storage(), LexicalAnalyzer->GetValue( text ) );
+			tag.setAttribute( GetRWord()->storage(), Lex->GetValue( text ) );
 			Scenario->addTagToCurrentLine( tag );
 		} else {
 			ErrorLog( TJS_W( "':('の後に画像名がないか、')'がありません。" ) );
@@ -869,10 +833,10 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 		return true;
 	}
 	case Token::COLON: {	// emojiタグ追加
-		int text = LexicalAnalyzer->ReadToCharStrict( TJS_W( ':' ) );
+		int text = Lex->ReadToCharStrict( TJS_W( ':' ) );
 		if( text >= 0 ) {
 			Tag tag( GetRWord()->emoji() );
-			tag.setAttribute( GetRWord()->storage(), LexicalAnalyzer->GetValue( text ) );
+			tag.setAttribute( GetRWord()->storage(), Lex->GetValue( text ) );
 			Scenario->addTagToCurrentLine( tag );
 		} else {
 			ErrorLog( TJS_W( "':'の後に絵文字名がないか、':'がありません。" ) );
@@ -910,9 +874,9 @@ void Parser::ParseLine( tjs_int line ) {
 			// 改行のみ
 			Scenario->setValue( 0 );
 		} else {
-			LexicalAnalyzer->reset( str, length );
+			Lex->reset( str, length );
 			tjs_int value;
-			Token token = LexicalAnalyzer->GetFirstToken( value );
+			Token token = Lex->GetFirstToken( value );
 			if( HasSelectLine ) {
 				if( token == Token::SELECT ) {
 					ParseSelect(value);
@@ -970,9 +934,9 @@ void Parser::ParseLine( tjs_int line ) {
 
 			case Token::BEGIN_FIX_NAME: {
 				FixTagName.Clear();
-				tjs_int text = LexicalAnalyzer->ReadToSpace();
+				tjs_int text = Lex->ReadToSpace();
 				if( text >= 0 ) {
-					FixTagName = ttstr( LexicalAnalyzer->GetString( text ) );
+					FixTagName = ttstr( Lex->GetString( text ) );
 				}
 				Scenario->setVoid();
 				break;
@@ -984,7 +948,7 @@ void Parser::ParseLine( tjs_int line ) {
 
 			default:
 				while( ParseTag( token, value ) ) {
-					token = LexicalAnalyzer->GetTextToken( value );
+					token = Lex->GetTextToken( value );
 				}
 				break;
 			}
@@ -1008,7 +972,7 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 	Script.reset( new tjs_char[TJS_strlen( text ) + 1] );
 	TJS_strcpy( Script.get(), text );
 
-	LexicalAnalyzer->Free();
+	Lex->Free();
 	CurrentTag.reset( new Tag() );
 	Scenario.reset( new ScenarioDictionary() );
 	ClearRubyDecorationStack();
@@ -1037,7 +1001,6 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 		LineLengthVector.push_back( int( p - ls ) );
 	}
 
-	LineOffset = 0;
 	HasSelectLine = false;
 	LineAttribute = false;
 	MultiLineTag = false;

@@ -69,11 +69,11 @@ enum tTJSSkipCommentResult
 { scrContinue, scrEnded, scrNotComment };
 //---------------------------------------------------------------------------
 class Parser;
-class tTJSLexicalAnalyzer
+class LexicalAnalyzer
 {
 public:
-	tTJSLexicalAnalyzer(Parser *block);
-	~tTJSLexicalAnalyzer();
+	LexicalAnalyzer(Parser *block);
+	~LexicalAnalyzer();
 
 private:
 	const tjs_char *Current = nullptr;

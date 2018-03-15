@@ -94,8 +94,7 @@ public:
 
 private:
 	std::unique_ptr<tjs_char[]> Script;
-	std::unique_ptr<tjs_char[]> Name;
-	tjs_int LineOffset = 0;
+
 	tjs_int CurrentLine = 0;
 	bool LineAttribute = false;		// 1行で属性を書くスタイルの状態時true
 	bool MultiLineTag = false;
@@ -114,7 +113,7 @@ private:
 	// ルビ/文字装飾ネスト用スタック
 	std::stack<iTJSDispatch2*> RubyDecorationStack;
 
-	std::unique_ptr<tTJSLexicalAnalyzer> LexicalAnalyzer;
+	std::unique_ptr<LexicalAnalyzer> Lex;
 
 	std::vector<tjs_int> LineVector;
 	std::vector<tjs_int> LineLengthVector;
@@ -128,16 +127,9 @@ public:
 	tjs_int SrcPosToLine(tjs_int pos) const;
 	tjs_int LineToSrcPos(tjs_int line) const;
 
-	ttstr GetLineDescriptionString(tjs_int pos) const;
-
 	const tjs_char *GetScript() const { return Script.get(); }
 
-	tTJSLexicalAnalyzer * GetLexicalAnalyzer() { return LexicalAnalyzer.get(); }
-
-	const tjs_char *GetName() const { return Name.get(); }
-	void SetName(const tjs_char *name, tjs_int lineofs);
-
-	tjs_int GetLineOffset() const { return LineOffset; }
+	LexicalAnalyzer * GetLexicalAnalyzer() { return Lex.get(); }
 
 	void WarningLog( const tjs_char* message );
 	void ErrorLog( const tjs_char* message );
@@ -151,7 +143,6 @@ private:
 
 	/** ルビ/文字装飾用スタックをクリアする。 */
 	void ClearRubyDecorationStack();
-
 
 	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
 	void PushAttribute( const tTJSVariantString* name, iTJSDispatch2* dic, bool isparameter = false );
