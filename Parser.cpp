@@ -188,7 +188,7 @@ void Parser::Log( LogType type, const tjs_char* message ) {
 		typemes = ttstr( TJS_W("error : ") );
 	}
 	tjs_int line = CurrentLine;
-	TVPAddLog( typemes + TJS_W("(") + ttstr(line) + TJS_W(")") );
+	TVPAddLog( typemes + TJS_W("(") + ttstr(line) + TJS_W(") " + message ) );
 }
 //---------------------------------------------------------------------------
 /** ルビ/文字装飾用スタックをクリアする。 */
@@ -441,6 +441,8 @@ bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 }
 //---------------------------------------------------------------------------
 void Parser::ParseTag() {
+	CurrentTag->release();
+
 	tjs_int value;
 	Token token = Lex->GetInTagToken( value );
 	bool findtagname = false;
@@ -623,13 +625,13 @@ void Parser::ParseCharacter() {
  */
 void Parser::ParseLabel() {
 	CurrentTag->release();
-	CurrentTag->setTypeName( GetRWord()->label() );
+	CurrentTag->setTagName( GetRWord()->label() );
 
 	tjs_int value;
 	Token token = Lex->GetInTagToken( value );
 	if( token == Token::SYMBOL || token == Token::VERTLINE ) {
 		if( token == Token::SYMBOL ) {
-			const tTJSVariant& v = Lex->GetValue( value );
+			CurrentTag->setValue( GetRWord()->name(), Lex->GetValue( value ) );
 			token = Lex->GetInTagToken( value );
 		}
 		if( token == Token::VERTLINE ) {
@@ -658,7 +660,7 @@ void Parser::ParseLabel() {
  */
 void Parser::ParseSelect( tjs_int number ) {
 	CurrentTag->release();
-	CurrentTag->setTypeName( GetRWord()->select() );
+	CurrentTag->setTagName( GetRWord()->select() );
 
 	tjs_int value;
 	Token token = Lex->GetInTagToken( value );
@@ -705,7 +707,7 @@ void Parser::ParseSelect( tjs_int number ) {
  */
 void Parser::ParseNextScenario() {
 	CurrentTag->release();
-	CurrentTag->setTypeName( GetRWord()->next() );
+	CurrentTag->setTagName( GetRWord()->next() );
 
 	tjs_int text = Lex->ReadToSpace();
 	if( text >= 0 ) {

@@ -994,67 +994,22 @@ static void TJSRegisterReservedWordsHash(const tjs_char *word, tjs_int num)
 	TJSReservedWordHash->PropSet(TJS_MEMBERENSURE, word, NULL, &val, TJSReservedWordHash);
 }
 //---------------------------------------------------------------------------
-#define TJS_REG_RES_WORD(word, value) TJSRegisterReservedWordsHash(TJS_W(word), value);
+#define TJS_REG_RES_WORD(word, value) TJSRegisterReservedWordsHash(TJS_W(word), static_cast<tjs_int>(value));
 static void TJSInitReservedWordsHashTable()
 {
 	if(TJSReservedWordHashInit) return;
 	TJSReservedWordHashInit = true;
 
-	//TJS_REG_RES_WORD("break", T_BREAK);
-	//TJS_REG_RES_WORD("continue", T_CONTINUE);
-	//TJS_REG_RES_WORD("const", T_CONST);
-	//TJS_REG_RES_WORD("catch", T_CATCH);
-	//TJS_REG_RES_WORD("class", T_CLASS);
-	//TJS_REG_RES_WORD("case", T_CASE);
-	//TJS_REG_RES_WORD("debugger", T_DEBUGGER);
-	//TJS_REG_RES_WORD("default", T_DEFAULT);
-	//TJS_REG_RES_WORD("delete", T_DELETE);
-	//TJS_REG_RES_WORD("do", T_DO);
-	//TJS_REG_RES_WORD("extends", T_EXTENDS);
-	//TJS_REG_RES_WORD("export", T_EXPORT);
-	//TJS_REG_RES_WORD("enum", T_ENUM);
-	//TJS_REG_RES_WORD("else", T_ELSE);
-	//TJS_REG_RES_WORD("function", T_FUNCTION);
-	//TJS_REG_RES_WORD("finally", T_FINALLY);
-	TJS_REG_RES_WORD("false", T_FALSE);
-	//TJS_REG_RES_WORD("for", T_FOR);
-	//TJS_REG_RES_WORD("global", T_GLOBAL);
-	//TJS_REG_RES_WORD("getter", T_GETTER);
-	//TJS_REG_RES_WORD("goto", T_GOTO);
-	//TJS_REG_RES_WORD("incontextof", T_INCONTEXTOF);
-	//TJS_REG_RES_WORD("invalidate", T_INVALIDATE);
-	//TJS_REG_RES_WORD("instanceof", T_INSTANCEOF);
-	//TJS_REG_RES_WORD("isvalid", T_ISVALID);
-	//TJS_REG_RES_WORD("import", T_IMPORT);
-	TJS_REG_RES_WORD("int", T_INT);
-	//TJS_REG_RES_WORD("in", T_IN);
+	TJS_REG_RES_WORD("false", Token::T_FALSE);
+	//TJS_REG_RES_WORD("int", Token::T_INT);
 	//TJS_REG_RES_WORD("if", T_IF);
-	TJS_REG_RES_WORD("null", T_NULL);
-	//TJS_REG_RES_WORD("new", T_NEW);
-	//TJS_REG_RES_WORD("octet", T_OCTET);
-	//TJS_REG_RES_WORD("protected", T_PROTECTED);
-	//TJS_REG_RES_WORD("property", T_PROPERTY);
-	//TJS_REG_RES_WORD("private", T_PRIVATE);
-	//TJS_REG_RES_WORD("public", T_PUBLIC);
-	//TJS_REG_RES_WORD("return", T_RETURN);
-	TJS_REG_RES_WORD("real", T_REAL);
-	//TJS_REG_RES_WORD("synchronized", T_SYNCHRONIZED);
-	//TJS_REG_RES_WORD("switch", T_SWITCH);
-	//TJS_REG_RES_WORD("static", T_STATIC);
-	//TJS_REG_RES_WORD("setter", T_SETTER);
-	TJS_REG_RES_WORD("string", T_STRING);
-	//TJS_REG_RES_WORD("super", T_SUPER);
-	//TJS_REG_RES_WORD("typeof", T_TYPEOF);
-	//TJS_REG_RES_WORD("throw", T_THROW);
-	//TJS_REG_RES_WORD("this", T_THIS);
-	TJS_REG_RES_WORD("true", T_TRUE);
-	//TJS_REG_RES_WORD("try", T_TRY);
-	TJS_REG_RES_WORD("void", T_VOID);
-	//TJS_REG_RES_WORD("var", T_VAR);
-	//TJS_REG_RES_WORD("while", T_WHILE);
-	TJS_REG_RES_WORD("NaN", T_NAN);
-	TJS_REG_RES_WORD("Infinity", T_INFINITY);
-	//TJS_REG_RES_WORD("with", T_WITH);
+	TJS_REG_RES_WORD("null", Token::T_NULL);
+	//TJS_REG_RES_WORD("real", Token::T_REAL);
+	//TJS_REG_RES_WORD("string", Token::T_STRING);
+	TJS_REG_RES_WORD("true", Token::T_TRUE);
+	TJS_REG_RES_WORD("void", Token::T_VOID);
+	TJS_REG_RES_WORD("NaN", Token::T_NAN);
+	TJS_REG_RES_WORD("Infinity", Token::T_INFINITY);
 }
 //---------------------------------------------------------------------------
 static tjs_int TJSParseInteger( const tjs_char **ptr ) {
@@ -1627,20 +1582,17 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	*d = 0;
 	str.FixLen();
 
-	tjs_int retnum;
+	Token retnum = Token::EMPTY;
 
-	if(BareWord)
-		retnum = -1;
-	else {
+	if( !BareWord ) {
 		tTJSVariant val;
-		TJSReservedWordHash->PropGet( TJS_MEMBERMUSTEXIST, str.c_str(), str.GetHint(), &val, TJSReservedWordHash );
-		retnum = (tjs_int)val;
+		tjs_error hr = TJSReservedWordHash->PropGet( TJS_MEMBERMUSTEXIST, str.c_str(), str.GetHint(), &val, TJSReservedWordHash );
+		if( hr == TJS_S_OK ) {
+			retnum = static_cast<Token>( (tjs_int)val );
+		}
 	}
-
 	BareWord = false;
-
-	if(retnum == -1)
-	{
+	if(retnum == Token::EMPTY) {
 		// not a reserved word
 		n = PutValue(str);
 		return Token::SYMBOL;
@@ -1648,16 +1600,19 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 
 	switch(retnum)
 	{
-	case T_FALSE:
+	case Token::T_VOID:
+		n = PutValue( tTJSVariant() );
+		return Token::CONSTVAL;
+	case Token::T_FALSE:
 		n = PutValue(tTJSVariant(false));
 		return Token::NUMBER;
-	case T_NULL:
+	case Token::T_NULL:
 		n = PutValue(tTJSVariant((iTJSDispatch2*)nullptr));
 		return Token::CONSTVAL;
-	case T_TRUE:
+	case Token::T_TRUE:
 		n = PutValue(tTJSVariant(true));
 		return Token::NUMBER;
-	case T_NAN:
+	case Token::T_NAN:
 	  {
 		TJSSetFPUE();
 		tjs_real d;
@@ -1665,7 +1620,7 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 		n = PutValue(tTJSVariant(d));
 		return Token::NUMBER;
 	  }
-	case T_INFINITY:
+	case Token::T_INFINITY:
 	  {
 		TJSSetFPUE();
 		tjs_real d;
@@ -1674,8 +1629,7 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 		return Token::NUMBER;
 	  }
 	}
-
-	return static_cast<Token>(retnum);
+	return retnum;
 }
 #if 0
 tjs_int tTJSLexicalAnalyzer::GetToken(tjs_int &n)

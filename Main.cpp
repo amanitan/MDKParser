@@ -7,6 +7,9 @@
 #include "MDKParser.h"
 #include "ReservedWord.h"
 
+extern void TJSReservedWordsHashAddRef();
+extern void TJSReservedWordsHashRelease();
+
 #ifdef _WIN32
 #define DLL_EXPORT __declspec(dllexport)
 #define STDCALL __stdcall
@@ -70,6 +73,7 @@ extern "C" DLL_EXPORT HRESULT STDCALL V2Link(iTVPFunctionExporter *exporter)
 
 	// スタブ初期化後、予約語を初期化
 	InitializeReservedWord();
+	TJSReservedWordsHashAddRef();
 
 	tTJSVariant val;
 
@@ -143,6 +147,7 @@ extern "C" DLL_EXPORT HRESULT STDCALL V2Unlink()
 
 	// 予約語を開放
 	FinalizeReservedWord();
+	TJSReservedWordsHashRelease();
 
 	// スタブの使用終了(必ず記述する)
 	TVPUninitImportStub();

@@ -95,14 +95,16 @@ public:
 	void setTagName( const tTJSVariantString* name ) {
 		createDic();
 		tTJSVariant val( name );
-		setValue( GetRWord()->name(), val );
+		setValue( GetRWord()->tag(), val );
 	}
 	/** タイプ名を設定する */
+	/*
 	void setTypeName( const tTJSVariantString* name ) {
 		createDic();
 		tTJSVariant val( name );
 		setValue( GetRWord()->type(), val );
 	}
+	*/
 	/** 属性を設定する
 	 * @return true 再設定/false 新規追加
 	 */

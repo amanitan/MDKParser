@@ -32,8 +32,7 @@
 /**
  * tagは以下のような辞書形式で格納されている
 %[
-	type : "tag",
-	name : "tag name",	// tag名
+	tag : "tag name",	// tag名
 	command : [
 		"name",	// 属性値がない場合は、コマンドとして格納される
 	]
@@ -57,13 +56,13 @@
 ]
  * label の時は以下のような辞書形式で行に直接格納されている
 %[
-	type : "label",
+	tag : "label",
 	name : "name",
 	description : "desc"
 ]
  * > の時は以下のような形で行に直接格納されている。
 %[
-	type : "next",
+	tag : "next",
 	target : "filename",
 	cond : "flag == true",
 ]
