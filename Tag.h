@@ -86,6 +86,11 @@ public:
 		createDic();
 		dic_->PropSetByVS( TJS_MEMBERENSURE, const_cast<tTJSVariantString*>( name ), &val, dic_ );
 	}
+	/** 指定した名前で文字列を設定する */
+	void setText( const tTJSVariantString* name, const ttstr& txt ) {
+		tTJSVariant val( txt );
+		setValue( name, val );
+	}
 	/** タグ名を設定する */
 	void setTagName( const tTJSVariantString* name ) {
 		createDic();
@@ -98,15 +103,51 @@ public:
 		tTJSVariant val( name );
 		setValue( GetRWord()->type(), val );
 	}
-	/** 属性を設定する */
-	void setAttribute(const tTJSVariantString* name, const tTJSVariant& value ) {
+	/** 属性を設定する
+	 * @return true 再設定/false 新規追加
+	 */
+	bool setAttribute(const tTJSVariantString* name, const tTJSVariant& value ) {
+		bool exist = isExistAttribute( *name );
 		createAttribute();
 		attribute_->PropSetByVS( TJS_MEMBERENSURE, const_cast<tTJSVariantString*>(name), &value, attribute_ );
+		return exist;
 	}
-	/** パラメータを設定する */
-	void setParameter(const tTJSVariantString* name, const tTJSVariant& value ) {
+	/** パラメータを設定する
+	 * @return true 再設定/false 新規追加
+	 */
+	bool setParameter(const tTJSVariantString* name, const tTJSVariant& value ) {
+		bool exist = isExistParameter( *name );
 		createParameter();
 		parameter_->PropSetByVS( TJS_MEMBERENSURE, const_cast<tTJSVariantString*>(name), &value, parameter_ );
+		return exist;
+	}
+	/** ファイルプロパティを属性かパラメータに設定する */
+	bool setFileProperty( const tTJSVariantString* name, const tTJSVariantString* file, const tTJSVariantString* prop, bool isparam ) {
+		iTJSDispatch2* dic = TJSCreateDictionaryObject();
+		tTJSVariant vfile( file );
+		dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->file(), &vfile, dic );
+		tTJSVariant vprop( prop );
+		dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->prop(), &vprop, dic );
+		tTJSVariant tmp( dic, dic );
+		dic->Release();
+		if( isparam ) {
+			return setParameter( name, tmp );
+		} else {
+			return setAttribute( name, tmp );
+		}
+	}
+	/** 参照を属性かパラメータに設定する */
+	bool setReference( const tTJSVariantString* name, const tTJSVariantString* ref, bool isparam ) {
+		iTJSDispatch2* dic = TJSCreateDictionaryObject();
+		tTJSVariant vref( ref );
+		dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->ref(), &vref, dic );
+		tTJSVariant tmp( dic, dic );
+		dic->Release();
+		if( isparam ) {
+			return setParameter( name, tmp );
+		} else {
+			return setAttribute( name, tmp );
+		}
 	}
 	/** コマンドを追加する */
 	void addCommand( const tTJSVariantString* name ) {

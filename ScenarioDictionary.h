@@ -2,7 +2,7 @@
  * シナリオスクリプトを構造化した辞書を管理する
  */
 
-#ifdef __SCENARIO_DICTIONARY_H__
+#ifndef __SCENARIO_DICTIONARY_H__
 #define __SCENARIO_DICTIONARY_H__
 
 #ifdef _WIN32
@@ -62,7 +62,7 @@ public:
 	}
 	/** 現在の行にvoidを設定する */
 	void setVoid() {
-		tTJSVariant tmp();
+		tTJSVariant tmp;
 		setValue( tmp );
 	}
 	/** 現在の行にタグを設定する */
@@ -98,6 +98,7 @@ public:
 			}
 		}
 	}
+	iTJSDispatch2* getArray() { return Lines; }
 };
 
 

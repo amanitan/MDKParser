@@ -13,7 +13,7 @@
 #include "LexicalAnalyzer.h"
 #include <math.h>
 #include <ctype.h>
-#include "ScriptBlock.h"
+#include "Parser.h"
 
 static const tjs_char* TJSUnclosedComment = TJS_W("Un-terminated comment");
 static const tjs_char* TJSStringParseError = TJS_W( "Un - terminated string / regexp / octet literal" );
@@ -1072,7 +1072,7 @@ static tjs_int TJSParseInteger( const tjs_char **ptr ) {
 //---------------------------------------------------------------------------
 // tTJSLexicalAnalyzer
 //---------------------------------------------------------------------------
-tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(tTJSScriptBlock *block)
+tTJSLexicalAnalyzer::tTJSLexicalAnalyzer(Parser *block)
  : ScriptWork(new tjs_char[1024]), ScriptWorkSize(1024), Block(block)
 {
 	// resneeded is valid only if exprmode is true

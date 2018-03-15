@@ -177,15 +177,16 @@
     <ClCompile Include="LexicalAnalyzer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MDKParser.cpp" />
+    <ClCompile Include="Parser.cpp" />
     <ClCompile Include="ReservedWord.cpp" />
-    <ClCompile Include="ScriptBlock.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\tp_stub.h" />
     <ClInclude Include="LexicalAnalyzer.h" />
     <ClInclude Include="MDKParser.h" />
+    <ClInclude Include="Parser.h" />
     <ClInclude Include="ReservedWord.h" />
-    <ClInclude Include="ScriptBlock.h" />
+    <ClInclude Include="ScenarioDictionary.h" />
     <ClInclude Include="Tag.h" />
     <ClInclude Include="Token.h" />
   </ItemGroup>

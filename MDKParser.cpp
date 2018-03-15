@@ -1,11 +1,11 @@
 
 
 #include "MDKParser.h"
-#include "ScriptBlock.h"
+#include "Parser.h"
 
 //---------------------------------------------------------------------------
 tTJSNI_MDKParser::tTJSNI_MDKParser()
-	: Script( new tTJSScriptBlock() ) {
+	: Script( new Parser() ) {
 	Script->Initialize();
 }
 //---------------------------------------------------------------------------

@@ -68,11 +68,11 @@ void TJSReservedWordsHashRelease();
 enum tTJSSkipCommentResult
 { scrContinue, scrEnded, scrNotComment };
 //---------------------------------------------------------------------------
-class tTJSScriptBlock;
+class Parser;
 class tTJSLexicalAnalyzer
 {
 public:
-	tTJSLexicalAnalyzer(tTJSScriptBlock *block);
+	tTJSLexicalAnalyzer(Parser *block);
 	~tTJSLexicalAnalyzer();
 
 private:
@@ -117,7 +117,7 @@ private:
 	std::vector<tEmbeddableExpressionData> EmbeddableExpressionDataStack;
 
 
-	tTJSScriptBlock *Block;
+	Parser *Block;
 
 	tjs_char *Script = nullptr;
 
@@ -140,6 +140,7 @@ public:
 	void Unlex() {
 		Current = Script + PrevPos;
 	}
+	/* 残っている文字列を取得する */
 	ttstr GetRemainString() const { return ttstr( Current ); }
 
 	/* | までの文字列を読み取る */

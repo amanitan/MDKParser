@@ -8,8 +8,9 @@
 //---------------------------------------------------------------------------
 // Script Block Management
 //---------------------------------------------------------------------------
-#include "ScriptBlock.h"
+#include "Parser.h"
 #include "Tag.h"
+#include "ScenarioDictionary.h"
 #include <assert.h>
 
 static const tjs_char* TVPInternalError = TJS_W( "内部エラーが発生しました: at %1 line %2" );
@@ -64,7 +65,7 @@ static void TJS_eTJSCompileError( const tjs_char *msg ) {
 //---------------------------------------------------------------------------
 // tTJSScriptBlock
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::Initialize() {
+void Parser::Initialize() {
 	TagCommandPair.insert(std::make_pair(Token::PLUS, ttstr(TJS_W("add"))));
 	TagCommandPair.insert(std::make_pair(Token::MINUS, ttstr(TJS_W("del"))));
 	TagCommandPair.insert(std::make_pair(Token::ASTERISK, ttstr(TJS_W("all"))));
@@ -100,55 +101,9 @@ void tTJSScriptBlock::Initialize() {
 	//SignToToken.insert(std::make_pair(TJS_W('$'),Token::DOLLAR));
 	SignToToken.insert(std::make_pair(TJS_W('@'),Token::AT));
 	SignToToken.insert(std::make_pair(TJS_W('|'),Token::VERTLINE));
-
-	__endtrans_name = TJSMapGlobalStringMap(TJS_W("endtrans"));
-	__begintrans_name = TJSMapGlobalStringMap(TJS_W("begintrans"));
-
-	__storage_name = TJSMapGlobalStringMap(TJS_W("storage"));
-	__type_name = TJSMapGlobalStringMap(TJS_W("type"));
-	__name_name = TJSMapGlobalStringMap(TJS_W("name"));
-	__value_name = TJSMapGlobalStringMap(TJS_W("value"));
-
-	__tag_name = TJSMapGlobalStringMap(TJS_W("tag"));
-	__label_name = TJSMapGlobalStringMap(TJS_W("label"));
-	__select_name = TJSMapGlobalStringMap(TJS_W("select"));
-	__next_name = TJSMapGlobalStringMap(TJS_W("next"));
-	__selopt_name = TJSMapGlobalStringMap( TJS_W( "selopt" ) );
-
-	__attribute_name = TJSMapGlobalStringMap(TJS_W("attribute"));
-	__parameter_name = TJSMapGlobalStringMap(TJS_W("parameter"));
-	__command_name = TJSMapGlobalStringMap(TJS_W("command"));
-	__ref_name = TJSMapGlobalStringMap(TJS_W("ref"));
-	__file_name = TJSMapGlobalStringMap(TJS_W("file"));
-	__prop_name = TJSMapGlobalStringMap(TJS_W("prop"));
-
-	__trans_name = TJSMapGlobalStringMap(TJS_W("trans"));
-	__charname_name = TJSMapGlobalStringMap(TJS_W("charname"));
-	__alias_name = TJSMapGlobalStringMap(TJS_W("alias"));
-	__description_name = TJSMapGlobalStringMap(TJS_W("description"));
-	__text_name = TJSMapGlobalStringMap(TJS_W("text"));
-	__image_name = TJSMapGlobalStringMap(TJS_W("image"));
-	__target_name = TJSMapGlobalStringMap(TJS_W("target"));
-	__if_name = TJSMapGlobalStringMap(TJS_W("if"));
-	__cond_name = TJSMapGlobalStringMap(TJS_W("cond"));
-	__comment_name = TJSMapGlobalStringMap(TJS_W("comment"));
-
-	__voice_name = TJSMapGlobalStringMap(TJS_W("voice"));
-	__time_name = TJSMapGlobalStringMap(TJS_W("time"));
-	__wait_name = TJSMapGlobalStringMap(TJS_W("wait"));
-	__fade_name = TJSMapGlobalStringMap(TJS_W("fade"));
-
-	__lines_name = TJSMapGlobalStringMap( TJS_W( "lines" ) );
-
-	__ruby_name = TJSMapGlobalStringMap( TJS_W( "ruby" ) );
-	__endruby_name = TJSMapGlobalStringMap( TJS_W( "endruby" ) );
-	__l_name = TJSMapGlobalStringMap( TJS_W( "l" ) );
-	__textstyle_name = TJSMapGlobalStringMap( TJS_W( "textstyle" ) );
-	__inlineimage_name = TJSMapGlobalStringMap( TJS_W( "inlineimage" ) );
-	__emoji_name = TJSMapGlobalStringMap( TJS_W( "emoji" ) );
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::AddSignWord( tjs_char sign, const ttstr& word ) {
+void Parser::AddSignWord( tjs_char sign, const ttstr& word ) {
 	auto tokenpair = SignToToken.find( sign );
 	if( tokenpair != SignToToken.end() ) {
 		auto result = TagCommandPair.insert(std::make_pair(tokenpair->second , word));
@@ -164,7 +119,7 @@ void tTJSScriptBlock::AddSignWord( tjs_char sign, const ttstr& word ) {
 	}
 }
 //---------------------------------------------------------------------------
-ttstr* tTJSScriptBlock::GetTagSignWord( Token token ) {
+ttstr* Parser::GetTagSignWord( Token token ) {
 	auto ret = TagCommandPair.find( token );
 	if( ret != TagCommandPair.end() ) {
 		return &ret->second;
@@ -172,33 +127,15 @@ ttstr* tTJSScriptBlock::GetTagSignWord( Token token ) {
 	return nullptr;
 }
 //---------------------------------------------------------------------------
-tTJSScriptBlock::tTJSScriptBlock() {
-	iTJSDispatch2* arrayClass = nullptr;
-	iTJSDispatch2* a = TJSCreateArrayObject( &arrayClass );
-	try {
-		tTJSVariant val;
-		tjs_error er = arrayClass->PropGet( 0, TJS_W("add"), nullptr, &val, arrayClass );
-		if(TJS_FAILED(er)) TVPThrowInternalError;
-		ArrayAddFunc = val.AsObject();
-	} catch(...) {
-		a->Release();
-		arrayClass->Release();
-		if(ArrayAddFunc) ArrayAddFunc->Release(), ArrayAddFunc = nullptr;
-		throw;
-	}
-	a->Release();
-	arrayClass->Release();
-
+Parser::Parser() {
 	LexicalAnalyzer.reset( new tTJSLexicalAnalyzer(this) );
 }
 //---------------------------------------------------------------------------
-tTJSScriptBlock::~tTJSScriptBlock()
-{
+Parser::~Parser() {
 	LexicalAnalyzer.reset();
-	if(ArrayAddFunc) ArrayAddFunc->Release(), ArrayAddFunc = nullptr;
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::SetName(const tjs_char *name, tjs_int lineofs)
+void Parser::SetName(const tjs_char *name, tjs_int lineofs)
 {
 	if( name ) {
 		LineOffset = lineofs;
@@ -207,7 +144,7 @@ void tTJSScriptBlock::SetName(const tjs_char *name, tjs_int lineofs)
 	}
 }
 //---------------------------------------------------------------------------
-const tjs_char * tTJSScriptBlock::GetLine(tjs_int line, tjs_int *linelength) const
+const tjs_char * Parser::GetLine(tjs_int line, tjs_int *linelength) const
 {
 	// note that this function DOES matter LineOffset
 	line -= LineOffset;
@@ -215,7 +152,7 @@ const tjs_char * tTJSScriptBlock::GetLine(tjs_int line, tjs_int *linelength) con
 	return Script.get() + LineVector[line];
 }
 //---------------------------------------------------------------------------
-tjs_int tTJSScriptBlock::SrcPosToLine(tjs_int pos) const
+tjs_int Parser::SrcPosToLine(tjs_int pos) const
 {
 	tjs_uint s = 0;
 	tjs_uint e = (tjs_uint)LineVector.size();
@@ -230,14 +167,14 @@ tjs_int tTJSScriptBlock::SrcPosToLine(tjs_int pos) const
 	}
 }
 //---------------------------------------------------------------------------
-tjs_int tTJSScriptBlock::LineToSrcPos(tjs_int line) const
+tjs_int Parser::LineToSrcPos(tjs_int line) const
 {
 	// assumes line is added by LineOffset
 	line -= LineOffset;
 	return LineVector[line];
 }
 //---------------------------------------------------------------------------
-ttstr tTJSScriptBlock::GetLineDescriptionString(tjs_int pos) const
+ttstr Parser::GetLineDescriptionString(tjs_int pos) const
 {
 	tjs_int line = SrcPosToLine(pos)+1;
 	ttstr name;
@@ -255,16 +192,16 @@ ttstr tTJSScriptBlock::GetLineDescriptionString(tjs_int pos) const
 	return name + TJS_W("(") + ttstr(line) + TJS_W(")");
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::ConsoleOutput(const tjs_char *msg, void *data)
+void Parser::ConsoleOutput(const tjs_char *msg, void *data)
 {
 	TVPAddLog( msg );
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::WarningLog( const tjs_char* message ) {
+void Parser::WarningLog( const tjs_char* message ) {
 	Log( LogType::Warning, message );
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::ErrorLog( const tjs_char* message ) {
+void Parser::ErrorLog( const tjs_char* message ) {
 	if( CompileErrorCount == 0 ) {
 		FirstError = ttstr(message);
 	}
@@ -272,7 +209,7 @@ void tTJSScriptBlock::ErrorLog( const tjs_char* message ) {
 	Log( LogType::Error, message );
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::Log( LogType type, const tjs_char* message ) {
+void Parser::Log( LogType type, const tjs_char* message ) {
 	ttstr typemes;
 	if( type == LogType::Warning ) {
 		typemes = ttstr( TJS_W("warning : ") );
@@ -291,139 +228,50 @@ void tTJSScriptBlock::Log( LogType type, const tjs_char* message ) {
 }
 //---------------------------------------------------------------------------
 /** ルビ/文字装飾用スタックをクリアする。 */
-void tTJSScriptBlock::ClearRubyDecorationStack() {
+void Parser::ClearRubyDecorationStack() {
 	while( !RubyDecorationStack.empty() ) {
 		RubyDecorationStack.top()->Release();
 		RubyDecorationStack.pop();
 	}
 }
 //---------------------------------------------------------------------------
-/** 現在の行に直接値を格納する。 */
-void tTJSScriptBlock::SetValueToCurrentLine( const tTJSVariant& val ) {
-	assert( ScenarioLines );
-	ScenarioLines->PropSetByNum( TJS_MEMBERENSURE, CurrentLine, &val, ScenarioLines );
-}
-//---------------------------------------------------------------------------
-/** 現在の行にタグを設定する。 */
-void tTJSScriptBlock::SetTagToCurrentLine( Tag* tag ) {
-	if( tag ) {
-		iTJSDispatch2* dic = tag->getTag();
-		if( dic ) {
-			tTJSVariant tmp( dic, dic );
-			SetValueToCurrentLine( tmp );
-		}
-	}
-}
-//---------------------------------------------------------------------------
-/** 現在の行に配列の要素として指定されたタグを追加する。 */
-void tTJSScriptBlock::PushTagToCurrentLineArray( Tag* tag ) {
-	if( tag ) {
-		iTJSDispatch2* dic = tag->getTag();
-		if( dic ) {
-			tTJSVariant tmp( dic, dic );
-			PushValueCurrentLine( tmp );
-		}
-	}
-}
-//---------------------------------------------------------------------------
-/** 現在の行に配列の要素として指定された値を追加する。 */
-void tTJSScriptBlock::PushValueCurrentLine( const tTJSVariant& val ) {
-	if( !CurrentLineArray ) {
-		CurrentLineArray = TJSCreateArrayObject();
-		tTJSVariant val( CurrentLineArray, CurrentLineArray );
-		SetValueToCurrentLine( val );
-	}
-	tTJSVariant* param[] = { const_cast<tTJSVariant*>(&val) };
-	ArrayAddFunc->FuncCall( 0, nullptr, nullptr, nullptr, 1, param, CurrentLineArray );
-}
-//---------------------------------------------------------------------------
-/** 現在の行に配列の要素としてタグを直接追加する。 */
-void tTJSScriptBlock::PushDirectTagCurrentLine( const tTJSVariantString* name, const tTJSVariantString* attr , const tTJSVariant* value ) {
-	Tag tag( name );
-	if( value && attr ) {
-		// 値と属性名がある時は属性として追加する
-		tag.setAttribute( attr, *value );
-	} else if( attr ) {
-		// 属性名のみがある時はコマンドとして追加する
-		tag.addCommand( attr );
-	} /* else 属性名も値もない時は、タグとしてのみ追加する */
-	tTJSVariant val( tag.getTag(), tag.getTag() );
-	PushValueCurrentLine( val );
-}
-//---------------------------------------------------------------------------
-/** 現在の辞書をタグとして現在の行に追加する */
-void tTJSScriptBlock::PushCurrentTag() {
-	PushTagToCurrentLineArray( CurrentTag.get() );
-	CurrentTag->release();
-}
-//---------------------------------------------------------------------------
-/** 現在の辞書を現在の行に直接格納する。(ラベルに使用) */
-void tTJSScriptBlock::PushCurrentLabel() {
-	SetTagToCurrentLine( CurrentTag.get() );
-	CurrentTag->release();
-}
-//---------------------------------------------------------------------------
-/** 指定された名前のタグを現在の行に追加する。 */
-void tTJSScriptBlock::PushNameTag( const ttstr& name ) {
-	CurrentTag->setTagName( name.AsVariantStringNoAddRef() );
-	PushCurrentTag();
+/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
+void Parser::PushAttribute( const tTJSVariantString* name, iTJSDispatch2* dic, bool isparameter ) {
+	tTJSVariant tmp( dic, dic );
+	dic->Release();
+	PushAttribute( name, tmp, isparameter );
 }
 //---------------------------------------------------------------------------
 /** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
-void tTJSScriptBlock::PushAttribute( const ttstr& name, const tTJSVariant& value, bool isparameter ) {
-	PushAttribute( *name.AsVariantStringNoAddRef(), value, isparameter );
-}
-//---------------------------------------------------------------------------
-/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
-void tTJSScriptBlock::PushAttribute( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter ) {
+void Parser::PushAttribute( const tTJSVariantString* name, const tTJSVariant& value, bool isparameter ) {
 	if( isparameter ) {
-		if( CurrentTag->isExistParameter( name ) ) {
+		if( CurrentTag->setParameter( name, value ) ) {
 			WarningLog( ( ttstr( name ) + ttstr( TJS_W( " パラメータが二重に追加されています。" ) ) ).c_str() );
 		}
-		CurrentTag->setParameter( &name, value );
 	} else {
-		if( CurrentTag->isExistAttribute( name ) ) {
+		if( CurrentTag->setAttribute( name, value ) ) {
 			WarningLog( ( ttstr( name ) + ttstr( TJS_W( " 属性が二重に追加されています。" ) ) ).c_str() );
 		}
-		CurrentTag->setAttribute( &name, value );
 	}
 }
 //---------------------------------------------------------------------------
 /** 指定された名前で現在の辞書の属性(もしくはパラメータ)に参照を設定する。 */
-void tTJSScriptBlock::PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter ) {
+void Parser::PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter ) {
 	iTJSDispatch2* ref = TJSCreateDictionaryObject();
-	ref->PropSetByVS( TJS_MEMBERENSURE, __ref_name.AsVariantStringNoAddRef(), &value, ref );
+	ref->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->ref(), &value, ref );
 	tTJSVariant tmp(ref,ref);
 	ref->Release();
-	PushAttribute( name, tmp, isparameter );
+	PushAttribute( &name, tmp, isparameter );
 }
 //---------------------------------------------------------------------------
 /** 指定された名前で現在の辞書の属性(もしくはパラメータ)にファイルプロパティを設定する。 */
-void tTJSScriptBlock::PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter ) {
+void Parser::PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter ) {
 	iTJSDispatch2* ref = TJSCreateDictionaryObject();
-	ref->PropSetByVS( TJS_MEMBERENSURE, __file_name.AsVariantStringNoAddRef(), &file, ref );
-	ref->PropSetByVS( TJS_MEMBERENSURE, __prop_name.AsVariantStringNoAddRef(), &prop, ref );
+	ref->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->file(), &file, ref );
+	ref->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->prop(), &prop, ref );
 	tTJSVariant tmp(ref,ref);
 	ref->Release();
-	PushAttribute( name, tmp, isparameter );
-}
-//---------------------------------------------------------------------------
-/** 現在の辞書にラベル詳細として文字列を設定する */
-void tTJSScriptBlock::SetCurrentLabelDescription( const ttstr& desc ) {
-	tTJSVariant tmp( desc );
-	SetValueToCurrentDic( __description_name, tmp );
-}
-//---------------------------------------------------------------------------
-/** 現在の辞書に指定された名前で値を設定する */
-void tTJSScriptBlock::SetValueToCurrentDic( const ttstr& name, const tTJSVariant& val ) {
-	CurrentTag->setValue( name.AsVariantStringNoAddRef(), val );
-}
-//---------------------------------------------------------------------------
-/** 現在の辞書を現在の行に直接格納する。 */
-void tTJSScriptBlock::AddCurrentDicToLine() {
-	tTJSVariant tmp( CurrentTag->getTag(), CurrentTag->getTag() );
-	SetValueToCurrentLine( tmp );
-	CurrentTag->release();
+	PushAttribute( &name, tmp, isparameter );
 }
 //---------------------------------------------------------------------------
 /**
@@ -433,7 +281,7 @@ void tTJSScriptBlock::AddCurrentDicToLine() {
  name::value : ファイル属性
  name.exp::value.value : ファイル属性
  */
-void tTJSScriptBlock::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVariant& valueSymbol, bool isparameter ) {
+void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVariant& valueSymbol, bool isparameter ) {
 	tjs_int value;
 	Token token = LexicalAnalyzer->GetInTagToken( value );
 	if( token == Token::DOUBLE_COLON ) {
@@ -515,7 +363,7 @@ void tTJSScriptBlock::ParseAttributeValueSymbol( const tTJSVariant& symbol, cons
 	}
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
+void Parser::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
 	tjs_int value;
 	Token token = LexicalAnalyzer->GetInTagToken( value );
 	if( token == Token::EQUAL ) {
@@ -527,7 +375,7 @@ void tTJSScriptBlock::ParseAttribute( const tTJSVariant& symbol, bool isparamete
 		case Token::NUMBER:
 		case Token::OCTET: {
 			const tTJSVariant& v = LexicalAnalyzer->GetValue(value);
-			PushAttribute( *symbol.AsStringNoAddRef(), v, isparameter );
+			PushAttribute( symbol.AsStringNoAddRef(), v, isparameter );
 			}
 			break;
 		case Token::PLUS: {
@@ -535,7 +383,7 @@ void tTJSScriptBlock::ParseAttribute( const tTJSVariant& symbol, bool isparamete
 			Token t = LexicalAnalyzer->GetInTagToken( v2 );
 			if( t == Token::NUMBER ) {
 				const tTJSVariant& v = LexicalAnalyzer->GetValue( v2 );
-				PushAttribute( *symbol.AsStringNoAddRef(), v, isparameter );
+				PushAttribute( symbol.AsStringNoAddRef(), v, isparameter );
 			} else {
 				ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に\"+\"数値以外が指定されました。数値として解釈できません。")).c_str() );
 			}
@@ -547,7 +395,7 @@ void tTJSScriptBlock::ParseAttribute( const tTJSVariant& symbol, bool isparamete
 			if( t == Token::NUMBER ) {
 				tTJSVariant m(LexicalAnalyzer->GetValue( v2 ));
 				m.changesign();
-				PushAttribute( *symbol.AsStringNoAddRef(), m, isparameter );
+				PushAttribute( symbol.AsStringNoAddRef(), m, isparameter );
 			} else {
 				ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に\"-\"数値以外が指定されました。数値として解釈できません。")).c_str() );
 			}
@@ -562,29 +410,29 @@ void tTJSScriptBlock::ParseAttribute( const tTJSVariant& symbol, bool isparamete
 			CurrentTag->addCommand( symbol.AsStringNoAddRef() );
 		} else {
 			tTJSVariant v(nullptr,nullptr);	// null
-			PushAttribute( *symbol.AsStringNoAddRef(), v, isparameter );
+			PushAttribute( symbol.AsStringNoAddRef(), v, isparameter );
 		}
 		LexicalAnalyzer->Unlex( token, value );
 	}
 }
 //---------------------------------------------------------------------------
-bool tTJSScriptBlock::ParseSpecialAttribute( Token token, tjs_int value ) {
+bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 	switch( token ) {
 	case Token::SINGLE_TEXT: {
 		const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
-		PushAttribute( __voice_name, v );
+		PushAttribute( GetRWord()->voice(), v );
 		return true;
 	}
 	case Token::DOUBLE_TEXT: {
 		const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
-		PushAttribute( __storage_name, v );
+		PushAttribute( GetRWord()->storage(), v );
 		return true;
 	}
 	case Token::LT:
 		token = LexicalAnalyzer->GetInTagToken( value );
 		if( token == Token::NUMBER ) {
 			const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
-			PushAttribute( __time_name, v );
+			PushAttribute( GetRWord()->time(), v );
 		} else {
 			ErrorLog( TJS_W("タグ内で'<'の後数値以外が指定されています。") );
 		}
@@ -598,7 +446,7 @@ bool tTJSScriptBlock::ParseSpecialAttribute( Token token, tjs_int value ) {
 		token = LexicalAnalyzer->GetInTagToken( value );
 		if( token == Token::NUMBER ) {
 			const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
-			PushAttribute( __wait_name, v );
+			PushAttribute( GetRWord()->wait(), v );
 		} else {
 			ErrorLog( TJS_W("タグ内で'{'の後数値以外が指定されています。") );
 		}
@@ -612,7 +460,7 @@ bool tTJSScriptBlock::ParseSpecialAttribute( Token token, tjs_int value ) {
 		token = LexicalAnalyzer->GetInTagToken( value );
 		if( token == Token::NUMBER ) {
 			const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
-			PushAttribute( __fade_name, v );
+			PushAttribute( GetRWord()->fade(), v );
 		} else {
 			ErrorLog( TJS_W("タグ内で'('の後数値以外が指定されています。") );
 		}
@@ -628,7 +476,7 @@ bool tTJSScriptBlock::ParseSpecialAttribute( Token token, tjs_int value ) {
 	return false;
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::ParseTag() {
+void Parser::ParseTag() {
 	tjs_int value;
 	Token token = LexicalAnalyzer->GetInTagToken( value );
 	bool findtagname = false;
@@ -656,12 +504,14 @@ void tTJSScriptBlock::ParseTag() {
 			} else {
 				LineAttribute = false;
 			}
-			PushCurrentTag();
+			Scenario->addTagToCurrentLine( *CurrentTag.get() );
+			CurrentTag->release();
 			return;
 
 		case Token::RBRACKET:
 			MultiLineTag = false;
-			PushCurrentTag();
+			Scenario->addTagToCurrentLine( *CurrentTag.get() );
+			CurrentTag->release();
 			return;	// exit tag
 
 		default: {
@@ -682,10 +532,11 @@ void tTJSScriptBlock::ParseTag() {
 	} while(!findtagname);
 
 	ParseAttributes();
-	PushCurrentTag();
+	Scenario->addTagToCurrentLine( *CurrentTag.get() );
+	CurrentTag->release();
 }
 //---------------------------------------------------------------------------
-void tTJSScriptBlock::ParseAttributes() {
+void Parser::ParseAttributes() {
 	tjs_int value;
 	Token token = LexicalAnalyzer->GetInTagToken( value );
 	bool intag = true;
@@ -742,7 +593,7 @@ void tTJSScriptBlock::ParseAttributes() {
 /**
  * <<< transname attributes
  */
-void tTJSScriptBlock::ParseTransition() {
+void Parser::ParseTransition() {
 	CurrentTag->release();
 	CurrentTag->setTagName( GetRWord()->endtrans() );
 
@@ -750,20 +601,20 @@ void tTJSScriptBlock::ParseTransition() {
 	tjs_int value;
 	Token token = LexicalAnalyzer->GetInTagToken( value );
 	if( token == Token::SYMBOL ) {
-		const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
 		tjs_int v2;
 		Token t = LexicalAnalyzer->GetInTagToken( v2 );
 		if( t == Token::EQUAL ) {	// <<< symbol=
 			LexicalAnalyzer->Unlex( t, v2 );
 		} else {
-			PushAttribute( __trans_name, v );
-			token = t;
-			value = v;
+			PushAttribute( GetRWord()->trans(), LexicalAnalyzer->GetValue( value ) );
 		}
 	} else {
 		LexicalAnalyzer->Unlex( token, value );
 	}
 	ParseAttributes();
+
+	Scenario->setTag( *CurrentTag.get() );
+	CurrentTag->release();
 }
 //---------------------------------------------------------------------------
 /**
@@ -771,25 +622,23 @@ void tTJSScriptBlock::ParseTransition() {
  * 指定された名前は name = 属性へ
  * 代替表示名がある時は alias = 属性へ
  */
-void tTJSScriptBlock::ParseCharacter() {
+void Parser::ParseCharacter() {
 	CurrentTag->release();
 	CurrentTag->setTagName( GetRWord()->charname() );
 
 	tjs_int value;
 	Token token = LexicalAnalyzer->GetInTagToken( value );
 	if( token == Token::SYMBOL ) {
-		const tTJSVariant& v = LexicalAnalyzer->GetValue( value );
-		PushAttribute( __name_name, v );
+		PushAttribute( GetRWord()->name(), LexicalAnalyzer->GetValue( value ) );
 		token = LexicalAnalyzer->GetInTagToken( value );
 		if( token == Token::SLASH ) {
 			// 代替表示名指定
 			token = LexicalAnalyzer->GetInTagToken( value );
 			if( token == Token::SYMBOL || token == Token::SINGLE_TEXT || token == Token::DOUBLE_TEXT ) {
-				const tTJSVariant& v2 = LexicalAnalyzer->GetValue( value );
-				PushAttribute( __alias_name, v2 );
+				PushAttribute( GetRWord()->alias(), LexicalAnalyzer->GetValue( value ) );
 			} else {
 				tTJSVariant voidvar;
-				PushAttribute( __alias_name, voidvar );	// alias に空文字指定
+				PushAttribute( GetRWord()->alias(), voidvar );	// alias に空文字指定
 				LexicalAnalyzer->Unlex( token, value );
 			}
 		} else {
@@ -800,12 +649,15 @@ void tTJSScriptBlock::ParseCharacter() {
 	} else {
 		ErrorLog( TJS_W("@の後に名前として解釈できない文字が指定されています。") );
 	}
+
+	Scenario->setTag( *CurrentTag.get() );
+	CurrentTag->release();
 }
 //---------------------------------------------------------------------------
 /**
  * #labelname|description
  */
-void tTJSScriptBlock::ParseLabel() {
+void Parser::ParseLabel() {
 	CurrentTag->release();
 	CurrentTag->setTypeName( GetRWord()->label() );
 
@@ -818,14 +670,17 @@ void tTJSScriptBlock::ParseLabel() {
 		}
 		if( token == Token::VERTLINE ) {
 			ttstr desc = LexicalAnalyzer->GetRemainString();
-			SetCurrentLabelDescription( desc );
+			if( desc.GetLen() > 0 ) {
+				CurrentTag->setText( GetRWord()->description(), desc );
+			}
 		}
 		
 	} else {
 		ErrorLog( TJS_W("#の後にラベル名として解釈できない文字が指定されています。") );
 	}
 
-	AddCurrentDicToLine();
+	Scenario->setTag( *CurrentTag.get() );
+	CurrentTag->release();
 }
 //---------------------------------------------------------------------------
 /**
@@ -837,7 +692,7 @@ void tTJSScriptBlock::ParseLabel() {
 ]
  
  */
-void tTJSScriptBlock::ParseSelect( tjs_int number ) {
+void Parser::ParseSelect( tjs_int number ) {
 	CurrentTag->release();
 	CurrentTag->setTypeName( GetRWord()->select() );
 
@@ -846,7 +701,7 @@ void tTJSScriptBlock::ParseSelect( tjs_int number ) {
 	if( token == Token::ASTERISK ) {
 		// * の時は、nullを入れてtargetのラベル参照
 		tTJSVariant v(nullptr,nullptr);
-		SetValueToCurrentDic( __text_name, v );
+		CurrentTag->setValue( GetRWord()->text(), v );
 		token = LexicalAnalyzer->GetInTagToken( value );
 		if( token != Token::VERTLINE ) {
 			ErrorLog( TJS_W("選択肢で*の後に|がありません。") );
@@ -855,28 +710,26 @@ void tTJSScriptBlock::ParseSelect( tjs_int number ) {
 		// | の時は、次の|までを画像ファイル名として読み込む
 		tjs_int text = LexicalAnalyzer->ReadToVerline();
 		if( text >= 0 ) {
-			const tTJSVariant& v = LexicalAnalyzer->GetValue( text );
-			SetValueToCurrentDic( __image_name, v );
+			CurrentTag->setValue( GetRWord()->image(), LexicalAnalyzer->GetValue( text ) );
 		}
 	} else {
 		// それ以外の時は、|までを表示するテキストとして解釈する
 		LexicalAnalyzer->Unlex();
 		tjs_int text = LexicalAnalyzer->ReadToVerline();
 		if( text >= 0 ) {
-			const tTJSVariant& v = LexicalAnalyzer->GetValue( text );
-			SetValueToCurrentDic( __text_name, v );
+			CurrentTag->setValue( GetRWord()->text(), LexicalAnalyzer->GetValue( text ) );
 		}
 	}
 	tjs_int text = LexicalAnalyzer->ReadToVerline();
 	if( text >= 0 ) {
-		const tTJSVariant& v = LexicalAnalyzer->GetValue( text );
-		SetValueToCurrentDic( __target_name, v );
+		CurrentTag->setValue( GetRWord()->target(), LexicalAnalyzer->GetValue( text ) );
 	}
 	// それ以降は属性として読み込む
 	LineAttribute = true;
 	ParseAttributes();
 
-	AddCurrentDicToLine();
+	Scenario->setTag( *CurrentTag.get() );
+	CurrentTag->release();
 }
 //---------------------------------------------------------------------------
 /**
@@ -886,43 +739,42 @@ void tTJSScriptBlock::ParseSelect( tjs_int number ) {
 	cond : "flag"
 ]
  */
-void tTJSScriptBlock::ParseNextScenario() {
+void Parser::ParseNextScenario() {
 	CurrentTag->release();
 	CurrentTag->setTypeName( GetRWord()->next() );
 
 	tjs_int text = LexicalAnalyzer->ReadToSpace();
 	if( text >= 0 ) {
-		const tTJSVariant& v = LexicalAnalyzer->GetValue( text );
-		SetValueToCurrentDic( __target_name, v );
+		CurrentTag->setValue( GetRWord()->target(), LexicalAnalyzer->GetValue( text ) );
 	}
 	text = LexicalAnalyzer->ReadToSpace();
 	if( text >= 0 ) {
 		const tTJSVariant& v = LexicalAnalyzer->GetValue( text );
 		tTJSVariantString* vs = v.AsStringNoAddRef();
-		if( __if_name == ttstr(vs) ) {
+		if( GetRWord()->if_ == ttstr(vs) ) {
 			text = LexicalAnalyzer->ReadToSpace();
 			if( text >= 0 ) {
-				const tTJSVariant& v = LexicalAnalyzer->GetValue( text );
-				SetValueToCurrentDic( __cond_name, v );
+				CurrentTag->setValue( GetRWord()->cond(), LexicalAnalyzer->GetValue( text ) );
 			} else {
 				ErrorLog( TJS_W(">の後のifに続く条件式がありません。") );
 			}
 		}
 	}
 
-	AddCurrentDicToLine();
+	Scenario->setTag( *CurrentTag.get() );
+	CurrentTag->release();
 }
 //---------------------------------------------------------------------------
 /**
  タグかテキストを解析する
  */
-bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
+bool Parser::ParseTag( Token token, tjs_int value ) {
 	if( token == Token::EOL ) return false;
 	TextAttribute = false;
 
 	switch( token ) {
 	case Token::TEXT:
-		PushValueCurrentLine( LexicalAnalyzer->GetValue(value) );
+		Scenario->addValueToCurrentLine( LexicalAnalyzer->GetValue( value ) );
 		return true;
 
 	case Token::BEGIN_TAG:
@@ -933,7 +785,7 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 		iTJSDispatch2* dic = TJSCreateDictionaryObject();
 		RubyDecorationStack.push( dic );
 		tTJSVariant v( dic, dic );
-		PushValueCurrentLine( v );	// 空の辞書を追加しておく
+		Scenario->addValueToCurrentLine( dic );	// 空の辞書を追加しておく
 		return true;
 	}
 	case Token::BEGIN_RUBY: {	// 《が来たので、ルビ文字であるとみなす
@@ -944,13 +796,13 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 					const tTJSVariant &v = LexicalAnalyzer->GetValue( text );
 					iTJSDispatch2* dic = RubyDecorationStack.top();
 					RubyDecorationStack.pop();
-					dic->PropSetByVS( TJS_MEMBERENSURE, __text_name.AsVariantStringNoAddRef(), &v, dic );
-					tTJSVariant tag( __ruby_name );
-					dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+					dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->text(), &v, dic );
+					tTJSVariant tag( GetRWord()->ruby() );
+					dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->name(), &tag, dic );
 				}
 				// [endruby]タグ追加
 				Tag tag( GetRWord()->endruby() );
-				PushTagToCurrentLineArray( &tag );
+				Scenario->addTagToCurrentLine( tag );
 			} else {
 				ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
 			}
@@ -964,12 +816,12 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 			{	// rubyタグの内容を埋める/ text属性がないrubyとして登録する、text属性がない場合は辞書から検索してもらう
 				iTJSDispatch2* dic = RubyDecorationStack.top();
 				RubyDecorationStack.pop();
-				tTJSVariant tag( __ruby_name );
-				dic->PropSetByVS( TJS_MEMBERENSURE, __name_name.AsVariantStringNoAddRef(), &tag, dic );
+				tTJSVariant tag( GetRWord()->ruby() );
+				dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->name(), &tag, dic );
 			}
 			// [endruby]タグ追加
 			Tag tag( GetRWord()->endruby() );
-			PushTagToCurrentLineArray( &tag );
+			Scenario->addTagToCurrentLine( tag );
 		} else {
 			ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
 		}
@@ -987,7 +839,8 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 				TextAttribute = true;
 				ParseAttributes();
 				TextAttribute = false;
-				PushCurrentTag();
+				Scenario->addTagToCurrentLine( *CurrentTag.get() );
+				CurrentTag->release();
 				CurrentTag.reset( oldTag );
 			} else {
 				ErrorLog( TJS_W( "'{'の前に'|'がないため、文字装飾として解釈できません。" ) );
@@ -1000,7 +853,7 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 
 	case Token::WAIT_RETURN: { // l タグ追加
 		Tag tag( GetRWord()->l() );
-		PushTagToCurrentLineArray( &tag );
+		Scenario->addTagToCurrentLine( tag );
 		return true;
 	}
 
@@ -1009,7 +862,7 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 		if( text >= 0 ) {
 			Tag tag( GetRWord()->inlineimage() );
 			tag.setAttribute( GetRWord()->storage(), LexicalAnalyzer->GetValue( text ) );
-			PushTagToCurrentLineArray( &tag );
+			Scenario->addTagToCurrentLine( tag );
 		} else {
 			ErrorLog( TJS_W( "':('の後に画像名がないか、')'がありません。" ) );
 		}
@@ -1020,7 +873,7 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
 		if( text >= 0 ) {
 			Tag tag( GetRWord()->emoji() );
 			tag.setAttribute( GetRWord()->storage(), LexicalAnalyzer->GetValue( text ) );
-			PushTagToCurrentLineArray( &tag );
+			Scenario->addTagToCurrentLine( tag );
 		} else {
 			ErrorLog( TJS_W( "':'の後に絵文字名がないか、':'がありません。" ) );
 		}
@@ -1043,7 +896,7 @@ bool tTJSScriptBlock::ParseTag( Token token, tjs_int value ) {
  * 数値型の時は、意味を
  * タグや属性は辞書型で
  */
-void tTJSScriptBlock::ParseLine( tjs_int line ) {
+void Parser::ParseLine( tjs_int line ) {
 	if( static_cast<tjs_uint>(line) < LineVector.size() ) {
 		CurrentTag->release();
 		ClearRubyDecorationStack();
@@ -1055,8 +908,7 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 		const tjs_char *str = GetLine( line, &length );
 		if( length == 0 ) {
 			// 改行のみ
-			tTJSVariant val( 0 );
-			SetValueToCurrentLine( val );
+			Scenario->setValue( 0 );
 		} else {
 			LexicalAnalyzer->reset( str, length );
 			tjs_int value;
@@ -1070,66 +922,66 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 					CurrentTag->setTagName( GetRWord()->selopt() );
 					LineAttribute = true;
 					ParseAttributes();
-					AddCurrentDicToLine();
+
+					Scenario->setTag( *CurrentTag.get() );
+					CurrentTag->release();
 				}
 				return;
 			}
 
 			// first token
 			switch( token ) {
-			case Token::EOL: {
+			case Token::EOL:
 				// タブのみの行も空行と同じ
-				tTJSVariant val( 0 );
-				SetValueToCurrentLine( val );
+				Scenario->setValue( 0 );
+				break;
+
+			case Token::BEGIN_TRANS: {	// >>> 
+				// トランジション開始以降の文字列は無視し、begintransタグを格納するのみ
+				Tag tag( GetRWord()->begintrans() );
+				Scenario->setTag( tag );
 				break;
 			}
-			case Token::BEGIN_TRANS:	// >>> 
-				// トランジション開始以降の文字列は無視し、begintransタグを格納するのみ
-				PushNameTag( __begintrans_name );
-				break;
-			case Token::END_TRANS: {	// <<<
+			case Token::END_TRANS:	// <<<
 				ParseTransition();
-				AddCurrentDicToLine();
 				break;
-				}
+
 			case Token::AT:	// @
 				ParseCharacter();
-				AddCurrentDicToLine();
 				break;
+
 			case Token::LABEL:	// # タグ
 				ParseLabel();
 				break;
+
 			case Token::SELECT:	// [0-9]+\.
 				// value : select number.
 				ParseSelect(value);
 				HasSelectLine = true;
 				break;
+
 			case Token::NEXT_SCENARIO:	// >
 				ParseNextScenario();
 				break;
-			case Token::LINE_COMMENTS: {
-				//CreateCurrentDic( *__comment_name.AsVariantStringNoAddRef() );
-				//AddCurrentDicToLine();
-				tTJSVariant val;
-				SetValueToCurrentLine( val );	// void
+
+			case Token::LINE_COMMENTS:
+				Scenario->setVoid();
 				break;
-			}
+
 			case Token::BEGIN_FIX_NAME: {
 				FixTagName.Clear();
 				tjs_int text = LexicalAnalyzer->ReadToSpace();
 				if( text >= 0 ) {
 					FixTagName = ttstr( LexicalAnalyzer->GetString( text ) );
 				}
-				tTJSVariant val;
-				SetValueToCurrentLine( val );	// void
+				Scenario->setVoid();
 				break;
 			}
-			case Token::END_FIX_NAME: {
+			case Token::END_FIX_NAME:
 				FixTagName.Clear();
-				tTJSVariant val;
-				SetValueToCurrentLine( val );	// void
+				Scenario->setVoid();
 				break;
-			}
+
 			default:
 				while( ParseTag( token, value ) ) {
 					token = LexicalAnalyzer->GetTextToken( value );
@@ -1143,7 +995,7 @@ void tTJSScriptBlock::ParseLine( tjs_int line ) {
 /**
  * 引数で渡された文字列を解析して、文字列として返す。
  */
-iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
+iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 	TJS_F_TRACE( "tTJSScriptBlock::ParseText" );
 
 	// compiles text and executes its global level scripts.
@@ -1158,6 +1010,7 @@ iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
 
 	LexicalAnalyzer->Free();
 	CurrentTag.reset( new Tag() );
+	Scenario.reset( new ScenarioDictionary() );
 	ClearRubyDecorationStack();
 	FixTagName.Clear();
 	LineVector.clear();
@@ -1192,13 +1045,8 @@ iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
 	FirstError.Clear();
 	FirstErrorPos = 0;
 
-	if( ScenarioLines ) {
-		ScenarioLines->Release();
-		ScenarioLines = nullptr;
-	}
-	ScenarioLines = TJSCreateArrayObject();
-	CompileErrorCount = 0;
 	for( CurrentLine = 0; static_cast<tjs_uint>(CurrentLine) < LineVector.size(); CurrentLine++ ) {
+		Scenario->setCurrentLine( CurrentLine );
 		ParseLine( CurrentLine );
 	}
 	if( CompileErrorCount ) {
@@ -1206,10 +1054,9 @@ iTJSDispatch2* tTJSScriptBlock::ParseText( const tjs_char* text ) {
 	}
 	iTJSDispatch2* retDic = TJSCreateDictionaryObject();
 	if( retDic ) {
-		tTJSVariant tmp( ScenarioLines, ScenarioLines );
-		retDic->PropSetByVS( TJS_MEMBERENSURE, __lines_name.AsVariantStringNoAddRef(), &tmp, retDic );
-		ScenarioLines->Release();
-		ScenarioLines = nullptr;
+		tTJSVariant tmp( Scenario->getArray(), Scenario->getArray() );
+		retDic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->lines(), &tmp, retDic );
+		Scenario->release();
 	}
 	return retDic;
 }

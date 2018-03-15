@@ -17,7 +17,7 @@ class tTJSNI_MDKParser : public tTJSNativeInstance
 {
 	typedef tTJSNativeInstance inherited;
 
-	std::unique_ptr<class tTJSScriptBlock> Script;
+	std::unique_ptr<class Parser> Script;
 
 public:
 	tTJSNI_MDKParser();

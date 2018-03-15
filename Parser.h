@@ -12,8 +12,8 @@
 //---------------------------------------------------------------------------
 // Script Block Management
 //---------------------------------------------------------------------------
-#ifndef tjsScriptBlockH
-#define tjsScriptBlockH
+#ifndef __PARSER_H__
+#define __PARSER_H__
 
 
 #ifdef _WIN32
@@ -76,56 +76,10 @@ void : コメント行/タグ名固定関係
  */
  
 //---------------------------------------------------------------------------
-// tTJSScriptBlock - a class for managing the script block
+// Parser
 //---------------------------------------------------------------------------
-class tTJSScriptBlock
+class Parser
 {
-	ttstr __endtrans_name;
-	ttstr __begintrans_name;
-
-	ttstr __storage_name;
-	ttstr __type_name;
-	ttstr __name_name;
-	ttstr __value_name;
-
-	ttstr __tag_name;
-	ttstr __label_name;
-	ttstr __select_name;
-	ttstr __next_name;
-	ttstr __selopt_name;
-
-	ttstr __attribute_name;
-	ttstr __parameter_name;
-	ttstr __command_name;
-	ttstr __ref_name;
-	ttstr __file_name;
-	ttstr __prop_name;
-
-	ttstr __trans_name;
-	ttstr __charname_name;
-	ttstr __alias_name;
-	ttstr __description_name;
-	ttstr __text_name;
-	ttstr __image_name;
-	ttstr __target_name;
-	ttstr __if_name;
-	ttstr __cond_name;
-	ttstr __comment_name;
-
-	ttstr __voice_name;
-	ttstr __time_name;
-	ttstr __wait_name;
-	ttstr __fade_name;
-
-	ttstr __lines_name;
-
-	ttstr __ruby_name;
-	ttstr __endruby_name;
-	ttstr __l_name;
-	ttstr __textstyle_name;
-	ttstr __inlineimage_name;
-	ttstr __emoji_name;
-
 	enum class LogType {
 		Warning,
 		Error,
@@ -135,8 +89,8 @@ class tTJSScriptBlock
 	std::map<tjs_char,Token>		SignToToken;
 
 public:
-	tTJSScriptBlock();
-	virtual ~tTJSScriptBlock();
+	Parser();
+	virtual ~Parser();
 
 private:
 	std::unique_ptr<tjs_char[]> Script;
@@ -153,13 +107,8 @@ private:
 
 	// tagに必要な要素をクラス化して、管理したほうが間違いが減るな……
 	std::unique_ptr<class Tag> CurrentTag;
-	//iTJSDispatch2* CurrentDic = nullptr; // DictionaryObject
-	//iTJSDispatch2* CurrentAttributeDic = nullptr;
-	//iTJSDispatch2* CurrentParameterDic = nullptr;
-	//iTJSDispatch2* CurrentCommandArray = nullptr;
 
-	iTJSDispatch2* ScenarioLines = nullptr;
-	iTJSDispatch2* CurrentLineArray = nullptr;
+	std::unique_ptr<class ScenarioDictionary> Scenario;
 	iTJSDispatch2* ArrayAddFunc = nullptr;
 
 	// ルビ/文字装飾ネスト用スタック
@@ -203,39 +152,16 @@ private:
 	/** ルビ/文字装飾用スタックをクリアする。 */
 	void ClearRubyDecorationStack();
 
-	/** 現在の行に直接値を格納する。 */
-	void SetValueToCurrentLine( const tTJSVariant& val );
-	/** 現在の行にタグを設定する。 */
-	void SetTagToCurrentLine( class Tag* tag );
 
-	/** 現在の行に配列の要素として指定されたタグを追加する。 */
-	void PushTagToCurrentLineArray( class Tag* tag );
-	/** 現在の行に配列の要素として指定された値を追加する。 */
-	void PushValueCurrentLine( const tTJSVariant& val );
-	/** 現在の行に配列の要素としてタグを直接追加する。 */
-	void PushDirectTagCurrentLine( const tTJSVariantString* name, const tTJSVariantString* attr = nullptr, const tTJSVariant* value = nullptr );
+	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
+	void PushAttribute( const tTJSVariantString* name, iTJSDispatch2* dic, bool isparameter = false );
+	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
+	void PushAttribute( const tTJSVariantString* name, const tTJSVariant& value, bool isparameter = false );
 
-	/** 現在の辞書をタグとして現在の行に追加する */
-	void PushCurrentTag();
-	/** 現在の辞書を現在の行に直接格納する。(ラベルに使用) */
-	void PushCurrentLabel();
-	/** 指定された名前のタグを現在の行に追加する。 */
-	void PushNameTag( const ttstr& name );
-	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
-	void PushAttribute( const ttstr& name, const tTJSVariant& value, bool isparameter = false );
-	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に値を設定する。 */
-	void PushAttribute( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter = false );
 	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)に参照を設定する。 */
 	void PushAttributeReference( const tTJSVariantString& name, const tTJSVariant& value, bool isparameter = false );
 	/** 指定された名前で現在の辞書の属性(もしくはパラメータ)にファイルプロパティを設定する。 */
 	void PushAttributeFileProperty( const tTJSVariantString& name, const tTJSVariant& file, const tTJSVariant& prop, bool isparameter = false );
-
-	/** 現在の辞書にラベル詳細として文字列を設定する */
-	void SetCurrentLabelDescription( const ttstr& desc );
-	/** 現在の辞書に指定された名前で値を設定する */
-	void SetValueToCurrentDic( const ttstr& name, const tTJSVariant& val );
-	/** 現在の辞書を現在の行に直接格納する。 */
-	void AddCurrentDicToLine();
 
 	void ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVariant& valueSymbol, bool isparameter=false );
 	void ParseAttribute( const tTJSVariant& symbol, bool isparameter=false );
