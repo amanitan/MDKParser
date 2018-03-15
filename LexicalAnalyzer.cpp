@@ -1058,6 +1058,7 @@ void LexicalAnalyzer::reset( const tjs_char *str, tjs_int length ) {
 	Script = ScriptWork.get();
 	Current = Script;
 	First = true;
+	RetValDeque.clear();
 }
 //---------------------------------------------------------------------------
 #define TJS_MATCH_W(word, code) \

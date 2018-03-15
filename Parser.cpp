@@ -187,7 +187,7 @@ void Parser::Log( LogType type, const tjs_char* message ) {
 	} else {
 		typemes = ttstr( TJS_W("error : ") );
 	}
-	tjs_int line = CurrentLine;
+	tjs_int line = CurrentLine + 1;
 	TVPAddLog( typemes + TJS_W("(") + ttstr(line) + TJS_W(") " + message ) );
 }
 //---------------------------------------------------------------------------
@@ -487,6 +487,7 @@ void Parser::ParseTag() {
 				ttstr* word = GetTagSignWord( token );
 				if( word != nullptr ) {
 					CurrentTag->addCommand( word->AsVariantStringNoAddRef() );
+					token = Lex->GetInTagToken( value );
 				} else {
 					// unknown symbol
 					findtagname = true;
@@ -552,6 +553,9 @@ void Parser::ParseAttributes() {
 				ErrorLog( TJS_W("タグ内で解釈できない記号が用いられました。") );
 			}
 			break;
+		}
+		if( intag ) {
+			token = Lex->GetInTagToken( value );
 		}
 	} while( intag );
 }
@@ -759,12 +763,10 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 		if( text >= 0 ) {
 			if( !RubyDecorationStack.empty() ) {
 				{	// rubyタグの内容を埋める
-					const tTJSVariant &v = Lex->GetValue( text );
-					iTJSDispatch2* dic = RubyDecorationStack.top();
+					Tag tag( RubyDecorationStack.top() );
 					RubyDecorationStack.pop();
-					dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->text(), &v, dic );
-					tTJSVariant tag( GetRWord()->ruby() );
-					dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->name(), &tag, dic );
+					tag.setAttribute( GetRWord()->text(), Lex->GetValue( text ) );
+					tag.setTagName( GetRWord()->ruby() );
 				}
 				// [endruby]タグ追加
 				Tag tag( GetRWord()->endruby() );
@@ -780,10 +782,9 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 	case Token::END_RUBY: {	// ルビ辞書の可能性
 		if( !RubyDecorationStack.empty() ) {
 			{	// rubyタグの内容を埋める/ text属性がないrubyとして登録する、text属性がない場合は辞書から検索してもらう
-				iTJSDispatch2* dic = RubyDecorationStack.top();
+				Tag tag( RubyDecorationStack.top() );
 				RubyDecorationStack.pop();
-				tTJSVariant tag( GetRWord()->ruby() );
-				dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->name(), &tag, dic );
+				tag.setTagName( GetRWord()->ruby() );
 			}
 			// [endruby]タグ追加
 			Tag tag( GetRWord()->endruby() );
