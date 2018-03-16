@@ -21,8 +21,8 @@ public:
 	Tag() {}
 	Tag( const tTJSVariantString* name ) {
 		dic_ = TJSCreateDictionaryObject();
-		tTJSVariant tag( name );
-		dic_->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->name(), &tag, dic_ );
+		tTJSVariant tag( *name );
+		dic_->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->tag(), &tag, dic_ );
 	}
 	Tag( iTJSDispatch2 * dic ) : dic_( dic ) {}
 	~Tag() {
@@ -94,7 +94,7 @@ public:
 	/** タグ名を設定する */
 	void setTagName( const tTJSVariantString* name ) {
 		createDic();
-		tTJSVariant val( name );
+		tTJSVariant val( *name );
 		setValue( GetRWord()->tag(), val );
 	}
 	/** タイプ名を設定する */
@@ -126,9 +126,9 @@ public:
 	/** ファイルプロパティを属性かパラメータに設定する */
 	bool setFileProperty( const tTJSVariantString* name, const tTJSVariantString* file, const tTJSVariantString* prop, bool isparam ) {
 		iTJSDispatch2* dic = TJSCreateDictionaryObject();
-		tTJSVariant vfile( file );
+		tTJSVariant vfile( *file );
 		dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->file(), &vfile, dic );
-		tTJSVariant vprop( prop );
+		tTJSVariant vprop( *prop );
 		dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->prop(), &vprop, dic );
 		tTJSVariant tmp( dic, dic );
 		dic->Release();
@@ -141,7 +141,7 @@ public:
 	/** 参照を属性かパラメータに設定する */
 	bool setReference( const tTJSVariantString* name, const tTJSVariantString* ref, bool isparam ) {
 		iTJSDispatch2* dic = TJSCreateDictionaryObject();
-		tTJSVariant vref( ref );
+		tTJSVariant vref( *ref );
 		dic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->ref(), &vref, dic );
 		tTJSVariant tmp( dic, dic );
 		dic->Release();
@@ -154,7 +154,7 @@ public:
 	/** コマンドを追加する */
 	void addCommand( const tTJSVariantString* name ) {
 		createCommand();
-		tTJSVariant val(name);
+		tTJSVariant val( *name );
 		command_->PropSetByNum( TJS_MEMBERENSURE, command_count_, &val, command_ );
 		command_count_++;
 	}

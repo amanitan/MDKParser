@@ -210,11 +210,11 @@ void Parser::PushAttribute( const tTJSVariantString* name, iTJSDispatch2* dic, b
 void Parser::PushAttribute( const tTJSVariantString* name, const tTJSVariant& value, bool isparameter ) {
 	if( isparameter ) {
 		if( CurrentTag->setParameter( name, value ) ) {
-			WarningLog( ( ttstr( const_cast<tTJSVariantString*>(name) ) + ttstr( TJS_W( " パラメータが二重に追加されています。" ) ) ).c_str() );
+			WarningLog( ( ttstr( *name ) + ttstr( TJS_W( " パラメータが二重に追加されています。" ) ) ).c_str() );
 		}
 	} else {
 		if( CurrentTag->setAttribute( name, value ) ) {
-			WarningLog( ( ttstr( const_cast<tTJSVariantString*>(name) ) + ttstr( TJS_W( " 属性が二重に追加されています。" ) ) ).c_str() );
+			WarningLog( ( ttstr( *name ) + ttstr( TJS_W( " 属性が二重に追加されています。" ) ) ).c_str() );
 		}
 	}
 }
@@ -250,7 +250,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 	Token token = Lex->GetInTagToken( value );
 	if( token == Token::DOUBLE_COLON ) {
 		//ファイル属性として解釈する
-		const tTJSVariantString* filename = valueSymbol.AsStringNoAddRef();
+		tTJSVariantString* filename = valueSymbol.AsStringNoAddRef();
 		token = Lex->GetInTagToken( value );
 		if( token == Token::SYMBOL ) {
 			ttstr prop( Lex->GetValue( value ).AsStringNoAddRef() );
@@ -265,7 +265,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 				}
 			}
 			Lex->Unlex( token, value );
-			tTJSVariant file(filename);
+			tTJSVariant file(*filename);
 			tTJSVariant propvalue(prop);
 			PushAttributeFileProperty( *symbol.AsStringNoAddRef(), file, prop, isparameter );
 		} else {
