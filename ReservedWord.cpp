@@ -33,6 +33,7 @@ ReservedWord::ReservedWord() {
 	if_ = TJSMapGlobalStringMap(TJS_W("if"));
 	cond_ = TJSMapGlobalStringMap(TJS_W("cond"));
 	comment_ = TJSMapGlobalStringMap(TJS_W("comment"));
+	number_ = TJSMapGlobalStringMap( TJS_W( "number" ) );
 
 	voice_ = TJSMapGlobalStringMap(TJS_W("voice"));
 	time_ = TJSMapGlobalStringMap(TJS_W("time"));

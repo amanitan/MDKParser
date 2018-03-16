@@ -39,6 +39,7 @@ struct ReservedWord {
 	ttstr if_;
 	ttstr cond_;
 	ttstr comment_;
+	ttstr number_;
 
 	ttstr voice_;
 	ttstr time_;
@@ -84,6 +85,7 @@ struct ReservedWord {
 	tTJSVariantString* if_word() const { return if_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* cond() const { return cond_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* comment() const { return comment_.AsVariantStringNoAddRef(); }
+	tTJSVariantString* number() const { return number_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* voice() const { return voice_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* time() const { return time_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* wait() const { return wait_.AsVariantStringNoAddRef(); }

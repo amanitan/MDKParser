@@ -664,6 +664,8 @@ void Parser::ParseLabel() {
 void Parser::ParseSelect( tjs_int number ) {
 	CurrentTag->release();
 	CurrentTag->setTagName( GetRWord()->select() );
+	tTJSVariant n( number );
+	CurrentTag->setAttribute( GetRWord()->number(), n );
 
 	tjs_int value;
 	Token token = Lex->GetInTagToken( value );
