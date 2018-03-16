@@ -1182,8 +1182,8 @@ tjs_int LexicalAnalyzer::ReadToChar( tjs_char end ) {
 			ReturnText( result );
 			return result;
 		} else if( ( *Current ) == end ) {
+			Current++;
 			if( TextBody.size() ) {
-				Current++;
 				ReturnText( result );
 				return result;
 			}
@@ -1209,8 +1209,8 @@ tjs_int LexicalAnalyzer::ReadToCharStrict( tjs_char end ) {
 			TextBody.clear();
 			return -1;	// not found 'end'
 		} else if( ( *Current ) == end ) {
+			Current++;
 			if( TextBody.size() ) {
-				Current++;
 				ReturnText( result );
 				return result;
 			}

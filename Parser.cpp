@@ -1008,8 +1008,7 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 	MultiLineTag = false;
 	TextAttribute = false;
 	FirstError.Clear();
-	FirstErrorPos = 0;
-
+	CompileErrorCount = 0;
 	for( CurrentLine = 0; static_cast<tjs_uint>(CurrentLine) < LineVector.size(); CurrentLine++ ) {
 		Scenario->setCurrentLine( CurrentLine );
 		ParseLine( CurrentLine );

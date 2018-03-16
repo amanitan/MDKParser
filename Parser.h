@@ -118,7 +118,6 @@ private:
 	std::vector<tjs_int> LineLengthVector;
 
 	tTJSString FirstError;
-	tjs_int FirstErrorPos;
 	tjs_int CompileErrorCount;
 
 public:
