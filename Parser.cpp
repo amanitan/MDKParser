@@ -885,6 +885,7 @@ void Parser::ParseLine( tjs_int line ) {
 					// 選択肢オプション
 					CurrentTag->setTagName( GetRWord()->selopt() );
 					LineAttribute = true;
+					Lex->Unlex();
 					ParseAttributes();
 
 					Scenario->setTag( *CurrentTag.get() );
