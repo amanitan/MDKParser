@@ -855,6 +855,8 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 }
 //---------------------------------------------------------------------------
 /**
+ * 1行分解析
+ *
  * 返却するデータ形式
  * 文字列は文字列型でそのまま、記号については記号番号を、タグや属性は辞書型で
  * Array型に1行ずつ格納する
@@ -878,14 +880,21 @@ void Parser::ParseLine( tjs_int line ) {
 			// 改行のみ
 			Scenario->setValue( 0 );
 		} else {
+			// 字句抽出器に1行分の文字列をコピーし初期化する
 			Lex->reset( str, length );
+
+			// 行頭字句を抽出する
 			tjs_int value;
 			Token token = Lex->GetFirstToken( value );
 			if( HasSelectLine ) {
+				// 直前の行が選択肢であった場合、次の行は選択肢か選択肢オプションとなる
 				if( token == Token::SELECT ) {
+					// 選択肢の場合は、選択肢として解析
 					ParseSelect(value);
 				} else {
+					// 選択肢でない場合は選択肢オプションとして解析する。
 					HasSelectLine = false;
+
 					// 選択肢オプション
 					CurrentTag->setTagName( GetRWord()->selopt() );
 					LineAttribute = true;
@@ -898,7 +907,7 @@ void Parser::ParseLine( tjs_int line ) {
 				return;
 			}
 
-			// first token
+			// 行頭字句を調べる
 			switch( token ) {
 			case Token::EOL:
 				// タブのみの行も空行と同じ
@@ -933,11 +942,11 @@ void Parser::ParseLine( tjs_int line ) {
 				ParseNextScenario();
 				break;
 
-			case Token::LINE_COMMENTS:
+			case Token::LINE_COMMENTS:	// コメント行はvoidを入れる
 				Scenario->setVoid();
 				break;
 
-			case Token::BEGIN_FIX_NAME: {
+			case Token::BEGIN_FIX_NAME: {	// <=name
 				FixTagName.Clear();
 				tjs_int text = Lex->ReadToSpace();
 				if( text >= 0 ) {
@@ -946,12 +955,12 @@ void Parser::ParseLine( tjs_int line ) {
 				Scenario->setVoid();
 				break;
 			}
-			case Token::END_FIX_NAME:
+			case Token::END_FIX_NAME:	// =>
 				FixTagName.Clear();
 				Scenario->setVoid();
 				break;
 
-			default:
+			default:	// 行頭記号に該当しない時は、文字列orタグとして解析する
 				while( ParseTag( token, value ) ) {
 					token = Lex->GetTextToken( value );
 				}
@@ -974,9 +983,11 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 
 	TJS_D( ( TJS_W( "Counting lines ...\n" ) ) )
 
+	// スクリプト文字列をコピーして保持する
 	Script.reset( new tjs_char[TJS_strlen( text ) + 1] );
 	TJS_strcpy( Script.get(), text );
 
+	// 各種状態を初期化
 	Lex->Free();
 	CurrentTag.reset( new Tag() );
 	Scenario.reset( new ScenarioDictionary() );
@@ -985,7 +996,7 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 	LineVector.clear();
 	LineLengthVector.clear();
 
-	// calculation of line-count
+	// 改行位置を求める
 	tjs_char *script = Script.get();
 	tjs_char *ls = script;
 	tjs_char *p = script;
@@ -1000,25 +1011,31 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 			p++;
 		}
 	}
-
 	if( p != ls ) {
 		LineVector.push_back( int( ls - script ) );
 		LineLengthVector.push_back( int( p - ls ) );
 	}
 
+	// 解析状態変数を初期化
 	HasSelectLine = false;
 	LineAttribute = false;
 	MultiLineTag = false;
 	TextAttribute = false;
 	FirstError.Clear();
 	CompileErrorCount = 0;
+
+	// 行ごとに解析を行う。
 	for( CurrentLine = 0; static_cast<tjs_uint>(CurrentLine) < LineVector.size(); CurrentLine++ ) {
 		Scenario->setCurrentLine( CurrentLine );
 		ParseLine( CurrentLine );
 	}
+
+	// コンパイルエラーがあった場合は例外を発生させる。
 	if( CompileErrorCount ) {
 		TJS_eTJSCompileError( FirstError );
 	}
+
+	// 解析結果の配列を辞書のlinesキーに入れる。
 	iTJSDispatch2* retDic = TJSCreateDictionaryObject();
 	if( retDic ) {
 		tTJSVariant tmp( Scenario->getArray(), Scenario->getArray() );
