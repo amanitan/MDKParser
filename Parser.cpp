@@ -712,21 +712,25 @@ void Parser::ParseNextScenario() {
 	CurrentTag->release();
 	CurrentTag->setTagName( GetRWord()->next() );
 
+	Lex->SkipSpace();
 	tjs_int text = Lex->ReadToSpace();
 	if( text >= 0 ) {
 		CurrentTag->setValue( GetRWord()->target(), Lex->GetValue( text ) );
 	}
+	Lex->SkipSpace();
 	text = Lex->ReadToSpace();
 	if( text >= 0 ) {
-		const tTJSVariant& v = Lex->GetValue( text );
-		tTJSVariantString* vs = v.AsStringNoAddRef();
-		if( GetRWord()->if_ == ttstr(vs) ) {
-			text = Lex->ReadToSpace();
-			if( text >= 0 ) {
-				CurrentTag->setValue( GetRWord()->cond(), Lex->GetValue( text ) );
+		if( GetRWord()->if_ == ttstr(Lex->GetString(text)) ) {
+			Lex->SkipSpace();
+			ttstr cond = Lex->GetRemainString();
+			if( cond.GetLen() > 0 ) {
+				tTJSVariant v( cond );
+				CurrentTag->setValue( GetRWord()->cond(), v );
 			} else {
 				ErrorLog( TJS_W(">の後のifに続く条件式がありません。") );
 			}
+		} else {
+			ErrorLog( (ttstr(TJS_W( ">の後に認識できない文字列があります : " )) + ttstr( Lex->GetString( text ) )).c_str() );
 		}
 	}
 

@@ -152,6 +152,8 @@ public:
 	/* 指定文字までの文字列を読み取る。end文字が見付からない場合は-1を返す */
 	tjs_int ReadToCharStrict( tjs_char end );
 
+	void SkipSpace();
+
 	void Free(void);
 
 //	void NextBraceIsBlockBrace();

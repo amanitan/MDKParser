@@ -1310,6 +1310,9 @@ Token LexicalAnalyzer::GetTextToken(tjs_int &n) {
 	// ここには来ないはず
 	return Token::EOL;
 }
+void LexicalAnalyzer::SkipSpace() {
+	TJSSkipSpace( &Current );
+}
 #if 0
 /**
  * ルビか文字装飾を行う中間部分
