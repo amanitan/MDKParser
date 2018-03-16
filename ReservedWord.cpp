@@ -45,6 +45,7 @@ ReservedWord::ReservedWord() {
 	endruby_ = TJSMapGlobalStringMap( TJS_W( "endruby" ) );
 	l_ = TJSMapGlobalStringMap( TJS_W( "l" ) );
 	textstyle_ = TJSMapGlobalStringMap( TJS_W( "textstyle" ) );
+	endtextstyle_ = TJSMapGlobalStringMap( TJS_W( "endtextstyle" ) );
 	inlineimage_ = TJSMapGlobalStringMap( TJS_W( "inlineimage" ) );
 	emoji_ = TJSMapGlobalStringMap( TJS_W( "emoji" ) );
 }

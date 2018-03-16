@@ -51,6 +51,7 @@ struct ReservedWord {
 	ttstr endruby_;
 	ttstr l_;
 	ttstr textstyle_;
+	ttstr endtextstyle_;
 	ttstr inlineimage_;
 	ttstr emoji_;
 
@@ -92,6 +93,7 @@ struct ReservedWord {
 	tTJSVariantString* endruby() const { return endruby_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* l() const { return l_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* textstyle() const { return textstyle_.AsVariantStringNoAddRef(); }
+	tTJSVariantString* endtextstyle() const { return endtextstyle_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* inlineimage() const { return inlineimage_.AsVariantStringNoAddRef(); }
 	tTJSVariantString* emoji() const { return emoji_.AsVariantStringNoAddRef(); }
 };

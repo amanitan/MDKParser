@@ -794,25 +794,23 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 		return true;
 	}
 	case Token::BEGIN_TXT_DECORATION: {	// { が来たので、テキスト装飾であるとみなす
-		int text = Lex->ReadToCharStrict( TJS_W( '}' ) );
-		if( text >= 0 ) {
-			if( !RubyDecorationStack.empty() ) {
-				iTJSDispatch2* dic = RubyDecorationStack.top();
-				RubyDecorationStack.pop();
-				Tag* oldTag = CurrentTag.release();
-				CurrentTag.reset( new Tag( dic ) );
-				CurrentTag->setTagName( GetRWord()->textstyle() );
-				TextAttribute = true;
-				ParseAttributes();
-				TextAttribute = false;
-				Scenario->addTagToCurrentLine( *CurrentTag.get() );
-				CurrentTag->release();
-				CurrentTag.reset( oldTag );
-			} else {
-				ErrorLog( TJS_W( "'{'の前に'|'がないため、文字装飾として解釈できません。" ) );
-			}
+		if( !RubyDecorationStack.empty() ) {
+			iTJSDispatch2* dic = RubyDecorationStack.top();
+			RubyDecorationStack.pop();
+			Tag* oldTag = CurrentTag.release();
+			CurrentTag.reset( new Tag( dic ) );
+			CurrentTag->setTagName( GetRWord()->textstyle() );
+			TextAttribute = true;
+			ParseAttributes();
+			TextAttribute = false;
+			//Scenario->addTagToCurrentLine( *CurrentTag.get() );
+			CurrentTag->release();
+			CurrentTag.reset( oldTag );
+			// [endtextstyle]タグ追加
+			Tag tag( GetRWord()->endtextstyle() );
+			Scenario->addTagToCurrentLine( tag );
 		} else {
-			ErrorLog( TJS_W( "'{'の後に'}'がないため、文字装飾として解釈できません。" ) );
+			ErrorLog( TJS_W( "'{'の前に'|'がないため、文字装飾として解釈できません。" ) );
 		}
 		return true;
 	}
