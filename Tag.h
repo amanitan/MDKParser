@@ -97,6 +97,16 @@ public:
 		tTJSVariant val( *name );
 		setValue( GetRWord()->tag(), val );
 	}
+	/** タグ名が設定されているかチェックする */
+	bool existTagName() {
+		if( dic_ ) {
+			tTJSVariant v;
+			tjs_error hr = dic_->PropGet( TJS_MEMBERMUSTEXIST, GetRWord()->tag_.c_str(), nullptr, &v, dic_ );
+			return ( hr != TJS_E_MEMBERNOTFOUND );
+		} else {
+			return false;
+		}
+	}
 	/** 属性を設定する
 	 * @return true 再設定/false 新規追加
 	 */

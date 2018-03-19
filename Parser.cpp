@@ -456,66 +456,89 @@ bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 }
 //---------------------------------------------------------------------------
 void Parser::ParseTag() {
-	CurrentTag->release();
-
-	tjs_int value;
-	Token token = Lex->GetInTagToken( value );
-	bool findtagname = false;
-	if( !FixTagName.IsEmpty() ) {
-		findtagname = true;
-		CurrentTag->setTagName( FixTagName.AsVariantStringNoAddRef() );
+	if( !MultiLineTag ) {
+		CurrentTag->release();
 	}
-	do {
-		switch( token ) {
-		case Token::SYMBOL: {
-			if( FixTagName.IsEmpty() ) {
+	bool findtagname = false;
+	if( MultiLineTag ) {
+		// 複数行の時はタグ名が既にあるかチェックする
+		findtagname = CurrentTag->existTagName();
+	}
+	if( !findtagname ) {
+		// タグ名がない時は固定タグ名があるかチェックする
+		if( !FixTagName.IsEmpty() ) {
+			// (複数行タグの時はここには来ない)
+			findtagname = true;
+			CurrentTag->setTagName( FixTagName.AsVariantStringNoAddRef() );
+		}
+	}
+
+	if( !findtagname ) {
+		tjs_int value;
+		Token token = Lex->GetInTagToken( value );
+		do {
+			switch( token ) {
+			case Token::SYMBOL: {	// シンボルはタグ名へ
 				const tTJSVariant& val = Lex->GetValue( value );
 				ttstr name( val.AsStringNoAddRef() );
 				CurrentTag->setTagName( name.AsVariantStringNoAddRef() );
 				findtagname = true;
-			} else {
-				Lex->Unlex( token, value );
+				break;
 			}
-			break;
-		}
 
-		case Token::EOL:
-			if( !LineAttribute ) {
-				MultiLineTag = true;
-			} else {
-				LineAttribute = false;
-			}
-			Scenario->addTagToCurrentLine( *CurrentTag.get() );
-			CurrentTag->release();
-			return;
-
-		case Token::RBRACKET:
-			MultiLineTag = false;
-			Scenario->addTagToCurrentLine( *CurrentTag.get() );
-			CurrentTag->release();
-			return;	// exit tag
-
-		default: {
-			if( ParseSpecialAttribute( token, value ) ) {
-				findtagname = true;
-			} else {
-				ttstr* word = GetTagSignWord( token );
-				if( word != nullptr ) {
-					CurrentTag->addCommand( word->AsVariantStringNoAddRef() );
-					token = Lex->GetInTagToken( value );
-				} else {
-					// unknown symbol
-					findtagname = true;
+			case Token::EOL:
+				if( !MultiLineTag ) {
+					if( !LineAttribute ) {
+						MultiLineTag = true;
+					} else {
+						LineAttribute = false;
+					}
+					Scenario->addTagToCurrentLine( *CurrentTag.get() );
+					CurrentTag->release();
 				}
-			}
-			break;
-		}
-		}
-	} while(!findtagname);
+				return;
 
+			case Token::RBRACKET:
+				if( MultiLineTag ) {
+					MultiLineTag = false;
+				} else {
+					Scenario->addTagToCurrentLine( *CurrentTag.get() );
+				}
+				CurrentTag->release();
+				return;	// exit tag
+
+			default:
+			{
+				if( ParseSpecialAttribute( token, value ) ) {
+					findtagname = true;
+				} else {
+					ttstr* word = GetTagSignWord( token );
+					if( word != nullptr ) {
+						CurrentTag->addCommand( word->AsVariantStringNoAddRef() );
+						token = Lex->GetInTagToken( value );
+					} else {
+						// unknown symbol
+						findtagname = true;
+					}
+				}
+				break;
+			}
+			}
+		} while( !findtagname );
+	}
+	bool prefMultiLine = MultiLineTag;
 	ParseAttributes();
-	Scenario->addTagToCurrentLine( *CurrentTag.get() );
-	CurrentTag->release();
+	if( !prefMultiLine && MultiLineTag ) {
+		// 最初に複数行となった時にタグを追加しておく、但しタグはまだ開放しない
+		Scenario->addTagToCurrentLine( *CurrentTag.get() );
+	} else if( prefMultiLine && !MultiLineTag ) {
+		// 複数行が解除された時、タグを開放する
+		CurrentTag->release();
+	} else if( !MultiLineTag ) {
+		// 複数行とは関係ない時、タグ追加と解放を行う
+		Scenario->addTagToCurrentLine( *CurrentTag.get() );
+		CurrentTag->release();
+	}
 }
 //---------------------------------------------------------------------------
 void Parser::ParseAttributes() {
@@ -830,7 +853,6 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 			TextAttribute = true;
 			ParseAttributes();
 			TextAttribute = false;
-			//Scenario->addTagToCurrentLine( *CurrentTag.get() );
 			CurrentTag->release();
 			CurrentTag.reset( oldTag );
 			// [endtextstyle]タグ追加
@@ -890,29 +912,52 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
  * タグや属性は辞書型で
  */
 void Parser::ParseLine( tjs_int line ) {
-	if( static_cast<tjs_uint>(line) < LineVector.size() ) {
-		CurrentTag->release();
-		ClearRubyDecorationStack();
+	if( static_cast<tjs_uint>( line ) >= LineVector.size() ) return;
 
-		LineAttribute = false;
-		TextAttribute = false;
+	if( !MultiLineTag ) CurrentTag->release();
+	ClearRubyDecorationStack();
 
-		tjs_int length;
-		const tjs_char *str = GetLine( line, &length );
-		if( length == 0 ) {
-			// 改行のみ
-			if( HasSelectLine ) {
-				// 直前が選択肢であった場合は、空のオプションを入れる
-				HasSelectLine = false;
-				Tag tag( GetRWord()->selopt() );
-				Scenario->setTag( tag );
+	LineAttribute = false;
+	TextAttribute = false;
+
+	tjs_int length;
+	const tjs_char *str = GetLine( line, &length );
+	if( length == 0 ) {
+		// 改行のみ
+		if( MultiLineTag ) {
+			// 複数行のタグの時はvoidを入れるだけにする
+			Scenario->setVoid();
+		} else if( HasSelectLine ) {
+			// 直前が選択肢であった場合は、空のオプションを入れる
+			HasSelectLine = false;
+			Tag tag( GetRWord()->selopt() );
+			Scenario->setTag( tag );
+		} else {
+			Scenario->setValue( 0 );
+		}
+	} else {
+		// 字句抽出器に1行分の文字列をコピーし初期化する
+		Lex->reset( str, length );
+
+		if( MultiLineTag ) {
+			ParseTag();
+			if( !MultiLineTag ) {
+				// 複数行のタグ終了時、その後に他のタグや文字列が続くか確認する
+				tjs_int value;
+				Token token = Lex->GetTextToken( value );
+				if( token != Token::EOL ) {
+					while( ParseTag( token, value ) ) {
+						token = Lex->GetTextToken( value );
+					}
+				} else {
+					// 複数行タグは終わり、他に要素がない場合はvoid(無視行)を入れる
+					Scenario->setVoid();
+				}
 			} else {
-				Scenario->setValue( 0 );
+				// まだタグが続いている場合は、void(無視行)を入れておく
+				Scenario->setVoid();
 			}
 		} else {
-			// 字句抽出器に1行分の文字列をコピーし初期化する
-			Lex->reset( str, length );
-
 			// 行頭字句を抽出する
 			tjs_int value;
 			Token token = Lex->GetFirstToken( value );
@@ -920,7 +965,7 @@ void Parser::ParseLine( tjs_int line ) {
 				// 直前の行が選択肢であった場合、次の行は選択肢か選択肢オプションとなる
 				if( token == Token::SELECT ) {
 					// 選択肢の場合は、選択肢として解析
-					ParseSelect(value);
+					ParseSelect( value );
 				} else {
 					// 選択肢でない場合は選択肢オプションとして解析する。
 					HasSelectLine = false;
@@ -944,7 +989,8 @@ void Parser::ParseLine( tjs_int line ) {
 				Scenario->setValue( 0 );
 				break;
 
-			case Token::BEGIN_TRANS: {	// >>> 
+			case Token::BEGIN_TRANS:
+			{	// >>> 
 				// トランジション開始以降の文字列は無視し、begintransタグを格納するのみ
 				Tag tag( GetRWord()->begintrans() );
 				Scenario->setTag( tag );
@@ -963,8 +1009,8 @@ void Parser::ParseLine( tjs_int line ) {
 				break;
 
 			case Token::SELECT:	// [0-9]+\.
-				// value : select number.
-				ParseSelect(value);
+								// value : select number.
+				ParseSelect( value );
 				HasSelectLine = true;
 				break;
 
@@ -976,7 +1022,8 @@ void Parser::ParseLine( tjs_int line ) {
 				Scenario->setVoid();
 				break;
 
-			case Token::BEGIN_FIX_NAME: {	// <=name
+			case Token::BEGIN_FIX_NAME:
+			{	// <=name
 				FixTagName.Clear();
 				tjs_int text = Lex->ReadToSpace();
 				if( text >= 0 ) {
@@ -1058,6 +1105,9 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 	for( CurrentLine = 0; static_cast<tjs_uint>(CurrentLine) < LineVector.size(); CurrentLine++ ) {
 		Scenario->setCurrentLine( CurrentLine );
 		ParseLine( CurrentLine );
+	}
+	if( MultiLineTag ) {
+		ErrorLog( TJS_W( "タグが閉じられずにファイル末尾まで到達しました。" ) );
 	}
 
 	// コンパイルエラーがあった場合は例外を発生させる。
