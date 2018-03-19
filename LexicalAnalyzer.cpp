@@ -1397,10 +1397,10 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 		return pair.token;
 	}
 
+	PrevPos = (tjs_int)( Current - Script ); // remember current position as "PrevPos"
+
 	if(!TJSSkipSpace(&Current)) return Token::EOL;	// skip space
 	if(*Current == 0) return Token::EOL;
-
-	PrevPos = (tjs_int)(Current - Script); // remember current position as "PrevPos"
 
 	switch(*Current)
 	{

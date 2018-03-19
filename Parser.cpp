@@ -45,6 +45,21 @@ void split( const tjs_string& val, const tjs_char& delim, TContainer& result ) {
 		pos = p + n;
 	}
 }
+inline tjs_string Trim( const tjs_string& val ) {
+	static const tjs_char* TRIM_STR = TJS_W( " \01\02\03\04\05\06\a\b\t\n\v\f\r\x0E\x0F\x7F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F" );
+	tjs_string::size_type pos = val.find_first_not_of( TRIM_STR );
+	tjs_string::size_type lastpos = val.find_last_not_of( TRIM_STR );
+	if( pos == lastpos ) {
+		if( pos == tjs_string::npos ) {
+			return val;
+		} else {
+			return val.substr( pos, 1 );
+		}
+	} else {
+		tjs_string::size_type len = lastpos - pos + 1;
+		return val.substr( pos, len );
+	}
+}
 
 static void TJSReportExceptionSource( const ttstr &msg ) {
 	//if( TJSEnableDebugMode )
@@ -681,7 +696,10 @@ void Parser::ParseSelect( tjs_int number ) {
 		// | の時は、次の|までを画像ファイル名として読み込む
 		tjs_int text = Lex->ReadToVerline();
 		if( text >= 0 ) {
-			CurrentTag->setValue( GetRWord()->image(), Lex->GetValue( text ) );
+			tjs_string str( Lex->GetString( text ) );
+			tjs_string imagefile = Trim( str );
+			tTJSVariant val( imagefile.c_str() );
+			CurrentTag->setValue( GetRWord()->image(), val );
 		}
 	} else {
 		// それ以外の時は、|までを表示するテキストとして解釈する
@@ -693,7 +711,10 @@ void Parser::ParseSelect( tjs_int number ) {
 	}
 	tjs_int text = Lex->ReadToVerline();
 	if( text >= 0 ) {
-		CurrentTag->setValue( GetRWord()->target(), Lex->GetValue( text ) );
+		tjs_string str( Lex->GetString( text ) );
+		tjs_string targetfile = Trim( str );
+		tTJSVariant val( targetfile.c_str() );
+		CurrentTag->setValue( GetRWord()->target(), val );
 	}
 	// それ以降は属性として読み込む
 	LineAttribute = true;
@@ -880,7 +901,14 @@ void Parser::ParseLine( tjs_int line ) {
 		const tjs_char *str = GetLine( line, &length );
 		if( length == 0 ) {
 			// 改行のみ
-			Scenario->setValue( 0 );
+			if( HasSelectLine ) {
+				// 直前が選択肢であった場合は、空のオプションを入れる
+				HasSelectLine = false;
+				Tag tag( GetRWord()->selopt() );
+				Scenario->setTag( tag );
+			} else {
+				Scenario->setValue( 0 );
+			}
 		} else {
 			// 字句抽出器に1行分の文字列をコピーし初期化する
 			Lex->reset( str, length );
