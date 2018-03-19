@@ -612,7 +612,7 @@ void Parser::ParseCharacter() {
 
 	tjs_int value;
 	Token token = Lex->GetInTagToken( value );
-	if( token == Token::SYMBOL ) {
+	if( token == Token::SYMBOL || token == Token::SINGLE_TEXT || token == Token::DOUBLE_TEXT ) {
 		PushAttribute( GetRWord()->name(), Lex->GetValue( value ) );
 		token = Lex->GetInTagToken( value );
 		if( token == Token::SLASH ) {
