@@ -490,11 +490,14 @@ void Parser::ParseTag() {
 				if( !MultiLineTag ) {
 					if( !LineAttribute ) {
 						MultiLineTag = true;
+						CurrentTag->createDic();
 					} else {
 						LineAttribute = false;
 					}
 					Scenario->addTagToCurrentLine( *CurrentTag.get() );
-					CurrentTag->release();
+					if( !MultiLineTag ) {
+						CurrentTag->release();
+					}
 				}
 				return;
 
