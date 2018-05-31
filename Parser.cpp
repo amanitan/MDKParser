@@ -84,8 +84,8 @@ void Parser::Initialize() {
 	TagCommandPair.insert(std::make_pair(Token::PLUS, ttstr(TJS_W("add"))));
 	TagCommandPair.insert(std::make_pair(Token::MINUS, ttstr(TJS_W("del"))));
 	TagCommandPair.insert(std::make_pair(Token::ASTERISK, ttstr(TJS_W("all"))));
-	TagCommandPair.insert(std::make_pair(Token::SHARP, ttstr(TJS_W("sync"))));
-	TagCommandPair.insert(std::make_pair(Token::EXCRAMATION, ttstr(TJS_W("nosync"))));
+	//TagCommandPair.insert(std::make_pair(Token::SHARP, ttstr(TJS_W("sync"))));
+	TagCommandPair.insert(std::make_pair(Token::EXCRAMATION, ttstr(TJS_W("sync"))));
 	TagCommandPair.insert(std::make_pair(Token::AMPERSAND, ttstr(TJS_W("nowait"))));
 
 	//SignToToken.insert(std::make_pair(TJS_W('>'),Token::GT));
