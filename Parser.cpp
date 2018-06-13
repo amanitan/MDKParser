@@ -764,7 +764,7 @@ void Parser::ParseNextScenario() {
 	Lex->SkipSpace();
 	tjs_int text = Lex->ReadToSpace();
 	if( text >= 0 ) {
-		CurrentTag->setValue( GetRWord()->target(), Lex->GetValue( text ) );
+		PushAttribute( GetRWord()->target(), Lex->GetValue( text ) );
 	}
 	Lex->SkipSpace();
 	text = Lex->ReadToSpace();
@@ -774,7 +774,7 @@ void Parser::ParseNextScenario() {
 			ttstr cond = Lex->GetRemainString();
 			if( cond.GetLen() > 0 ) {
 				tTJSVariant v( cond );
-				CurrentTag->setValue( GetRWord()->cond(), v );
+				PushAttribute( GetRWord()->cond(), v );
 			} else {
 				ErrorLog( TJS_W(">の後のifに続く条件式がありません。") );
 			}
