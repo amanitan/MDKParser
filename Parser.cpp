@@ -713,7 +713,7 @@ void Parser::ParseSelect( tjs_int number ) {
 	if( token == Token::ASTERISK ) {
 		// * の時は、nullを入れてtargetのラベル参照
 		tTJSVariant v(nullptr,nullptr);
-		CurrentTag->setValue( GetRWord()->text(), v );
+		PushAttribute( GetRWord()->text(), v );
 		token = Lex->GetInTagToken( value );
 		if( token != Token::VERTLINE ) {
 			ErrorLog( TJS_W("選択肢で*の後に|がありません。") );
@@ -725,14 +725,14 @@ void Parser::ParseSelect( tjs_int number ) {
 			tjs_string str( Lex->GetString( text ) );
 			tjs_string imagefile = Trim( str );
 			tTJSVariant val( imagefile.c_str() );
-			CurrentTag->setValue( GetRWord()->image(), val );
+			PushAttribute( GetRWord()->image(), val );
 		}
 	} else {
 		// それ以外の時は、|までを表示するテキストとして解釈する
 		Lex->Unlex();
 		tjs_int text = Lex->ReadToVerline();
 		if( text >= 0 ) {
-			CurrentTag->setValue( GetRWord()->text(), Lex->GetValue( text ) );
+			PushAttribute( GetRWord()->text(), Lex->GetValue( text ) );
 		}
 	}
 	tjs_int text = Lex->ReadToVerline();
@@ -740,7 +740,7 @@ void Parser::ParseSelect( tjs_int number ) {
 		tjs_string str( Lex->GetString( text ) );
 		tjs_string targetfile = Trim( str );
 		tTJSVariant val( targetfile.c_str() );
-		CurrentTag->setValue( GetRWord()->target(), val );
+		PushAttribute( GetRWord()->target(), val );
 	}
 	// それ以降は属性として読み込む
 	LineAttribute = true;
