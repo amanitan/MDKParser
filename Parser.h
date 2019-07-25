@@ -131,6 +131,8 @@ public:
 
 	void WarningLog( const tjs_char* message );
 	void ErrorLog( const tjs_char* message );
+	void WarningLog( ttstr message, const ttstr& p1 );
+	void ErrorLog( ttstr message, const ttstr& p1 );
 	void Log( LogType type, const tjs_char* message );
 
 	void Initialize();

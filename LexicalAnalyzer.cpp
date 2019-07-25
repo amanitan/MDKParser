@@ -14,13 +14,7 @@
 #include <math.h>
 #include <ctype.h>
 #include "Parser.h"
-
-static const tjs_char* TJSUnclosedComment = TJS_W("Un-terminated comment");
-static const tjs_char* TJSStringParseError = TJS_W( "Un - terminated string / regexp / octet literal" );
-static const tjs_char* TJSInsufficientMem = TJS_W( "Insufficient memory" );
-static const tjs_char* TJSPPError = TJS_W( "Error in conditional compiling expression" );
-static const tjs_char* TJSNumberError = TJS_W( "Cannot be parsed as a number" );
-static const tjs_char* TJSInvalidChar = TJS_W( "Invalid character \'%1\'" );
+#include "MDKMessages.h"
 
 void TJS_eTJSError( const ttstr & msg ) { TVPThrowExceptionMessage( msg.c_str() ); }
 void TJS_eTJSError( const tjs_char* msg ) { TVPThrowExceptionMessage( msg ); }
@@ -206,7 +200,7 @@ static tTJSSkipCommentResult TJSSkipComment(const tjs_char **ptr)
 		// block comment; skip to the next '*' '/'
 		// and we must allow nesting of the comment.
 		(*ptr) += 2;
-		if(*(*ptr) == 0) TJS_eTJSError(TJSUnclosedComment);
+		if(*(*ptr) == 0) TJS_eTJSError( TVPMdkGetText( NUM_MDK_UNTERMINATED_COMMENT ) );
 		tjs_int level = 0;
 		for(;;)
 		{
@@ -225,7 +219,7 @@ static tTJSSkipCommentResult TJSSkipComment(const tjs_char **ptr)
 				}
 				level --;
 			}
-			if(!TJSNext(&(*ptr))) TJS_eTJSError(TJSUnclosedComment);
+			if(!TJSNext(&(*ptr))) TJS_eTJSError( TVPMdkGetText( NUM_MDK_UNTERMINATED_COMMENT ) );
 		}
 		if(*(*ptr) ==0) return scrEnded;
 		TJSSkipSpace(&(*ptr));
@@ -389,7 +383,7 @@ static tTJSInternalParseStringResult
 	if(status == psrNone)
 	{
 		// error
-		TJS_eTJSError(TJSStringParseError);
+		TJS_eTJSError( TVPMdkGetText( NUM_MDK_UNTERMINATED_STRING_REGEX_OCTET ) );
 	}
 
 	str.FixLen();
@@ -809,7 +803,7 @@ static bool TJSParseOctet(tTJSVariant &val, const tjs_char **ptr)
 		switch(TJSSkipComment(ptr))
 		{
 		case scrEnded:
-			TJS_eTJSError(TJSStringParseError);
+			TJS_eTJSError( TVPMdkGetText( NUM_MDK_UNTERMINATED_STRING_REGEX_OCTET ) );
 		case scrContinue:
 		case scrNotComment:
 			;
@@ -829,7 +823,7 @@ static bool TJSParseOctet(tTJSVariant &val, const tjs_char **ptr)
 			{
 				buf = (tjs_uint8*)TJS_realloc(buf, buflen+1);
 				if(!buf)
-					TJS_eTJSError( TJSInsufficientMem );
+					TJS_eTJSError( TVPMdkGetText( NUM_MDK_INSUFFICIENT_MEMORY ) );
 				buf[buflen] = cur;
 				buflen++;
 			}
@@ -856,7 +850,7 @@ static bool TJSParseOctet(tTJSVariant &val, const tjs_char **ptr)
 				// store cur
 				buf = (tjs_uint8*)TJS_realloc(buf, buflen+1);
 				if(!buf)
-					TJS_eTJSError( TJSInsufficientMem );
+					TJS_eTJSError( TVPMdkGetText( NUM_MDK_INSUFFICIENT_MEMORY ) );
 				buf[buflen] = cur;
 				buflen++;
 
@@ -868,7 +862,7 @@ static bool TJSParseOctet(tTJSVariant &val, const tjs_char **ptr)
 		{
 			buf = (tjs_uint8*)TJS_realloc(buf, buflen+1);
 			if(!buf)
-				TJS_eTJSError(TJSInsufficientMem);
+				TJS_eTJSError( TVPMdkGetText( NUM_MDK_INSUFFICIENT_MEMORY ) );
 			buf[buflen] = cur;
 			buflen++;
 
@@ -879,7 +873,7 @@ static bool TJSParseOctet(tTJSVariant &val, const tjs_char **ptr)
 	}
 
 	// error
-	TJS_eTJSError(TJSStringParseError);
+	TJS_eTJSError( TVPMdkGetText( NUM_MDK_UNTERMINATED_STRING_REGEX_OCTET ) );
 
 	return false;
 }
@@ -899,7 +893,7 @@ static bool TJSParseRegExp(tTJSVariant &pat, const tjs_char **ptr)
 	// this returns an internal representation: '//flag/pattern' that can be parsed by
 	// RegExp._compile
 
-//	if(!TJSNext((*ptr))) TJS_eTJSError(TJSStringParseError);
+//	if(!TJSNext((*ptr))) TJS_eTJSError(TVPMdkGetText( NUM_MDK_UNTERMINATED_STRING_REGEX_OCTET ));
 
 	bool ok = false;
 	bool lastbackslash = false;
@@ -948,7 +942,7 @@ static bool TJSParseRegExp(tTJSVariant &pat, const tjs_char **ptr)
 	if(!ok)
 	{
 		// error
-		TJS_eTJSError(TJSStringParseError);
+		TJS_eTJSError( TVPMdkGetText( NUM_MDK_UNTERMINATED_STRING_REGEX_OCTET ) );
 	}
 
 	pat = str;
@@ -1543,7 +1537,7 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 	case TJS_W('9'): {	// number
 		tTJSVariant v;
 		bool r = TJSParseNumber(v, &Current);
-		if(!r) Block->ErrorLog( TJSNumberError );
+		if(!r) Block->ErrorLog( TVPMdkGetText( NUM_MDK_NUMBER_PARSE_ERRROR ).c_str() );
 		n=PutValue(v);
 		return Token::NUMBER;
 	}
@@ -1551,7 +1545,7 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 
 	if(!TJS_iswalpha(*Current) && *Current!=TJS_W('_'))
 	{
-		ttstr str(TJSInvalidChar);
+		ttstr str( TVPMdkGetText( NUM_MDK_INVALID_CHAR ) );
 		ttstr mes;
 		ttstr( *Current ).EscapeC( mes );
 		str.Replace(TJS_W("%1"), mes );
@@ -1566,7 +1560,7 @@ Token LexicalAnalyzer::GetInTagToken(tjs_int &n) {
 
 	if(nch == 0)
 	{
-		ttstr str(TJSInvalidChar);
+		ttstr str( TVPMdkGetText( NUM_MDK_INVALID_CHAR ) );
 		ttstr mes;
 		ttstr( *Current ).EscapeC( mes );
 		str.Replace(TJS_W("%1"), mes );
@@ -1873,7 +1867,7 @@ re_match:
 	  {
 		tTJSVariant v;
 		bool r = TJSParseNumber(v, &Current);
-		if(!r) Block->ErrorLog( TJSNumberError );
+		if(!r) Block->ErrorLog( TVPMdkGetText( NUM_MDK_NUMBER_PARSE_ERRROR ).c_str() );
 		n=PutValue(v);
 		return T_CONSTVAL;
 	  }
@@ -1881,7 +1875,7 @@ re_match:
 
 	if(!TJS_iswalpha(*Current) && *Current!=TJS_W('_'))
 	{
-		ttstr str(TJSInvalidChar);
+		ttstr str( TVPMdkGetText( NUM_MDK_INVALID_CHAR ) );
 		ttstr mes;
 		ttstr( *Current ).EscapeC( mes );
 		str.Replace(TJS_W("%1"), mes );
@@ -1897,7 +1891,7 @@ re_match:
 
 	if(nch == 0)
 	{
-		ttstr str(TJSInvalidChar);
+		ttstr str( TVPMdkGetText( NUM_MDK_INVALID_CHAR ) );
 		ttstr mes;
 		ttstr( *Current ).EscapeC( mes );
 		str.Replace(TJS_W("%1"), mes );
