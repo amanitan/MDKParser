@@ -60,7 +60,9 @@ iTJSDispatch2 * TVPCreateNativeClass_MDKParser() {
 }
 //---------------------------------------------------------------------------
 #ifdef _WIN32
-int WINAPI DllEntryPoint(HINSTANCE hinst, unsigned long reason, void* lpReserved) {
+HINSTANCE TVPMDKParserInst;
+int WINAPI DllMain( HINSTANCE hinst, unsigned long reason, void* lpReserved ) {
+	TVPMDKParserInst = hinst;
 	return 1;
 }
 #endif

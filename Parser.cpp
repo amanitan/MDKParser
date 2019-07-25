@@ -12,10 +12,10 @@
 #include "Tag.h"
 #include "ScenarioDictionary.h"
 #include <assert.h>
+#include "MDKMessages.h"
 
-static const tjs_char* TVPInternalError = TJS_W( "内部エラーが発生しました: at %1 line %2" );
 #define TVPThrowInternalError \
-	TVPThrowExceptionMessage(TVPInternalError, __FILE__,  __LINE__)
+	TVPThrowExceptionMessage(TVPMdkGetText(NUM_MDK_INTERNAL_ERROR), __FILE__,  __LINE__)
 
 template <typename TContainer>
 void split( const tjs_string& val, const tjs_char& delim, TContainer& result ) {
@@ -124,12 +124,12 @@ void Parser::AddSignWord( tjs_char sign, const ttstr& word ) {
 		auto result = TagCommandPair.insert(std::make_pair(tokenpair->second , word));
 		if( !result.second ) {
 			tjs_char ptr[128];
-			TJS_snprintf(ptr, sizeof(ptr)/sizeof(tjs_char), TJS_W("'%c'は登録済みです。"), sign);
+			TJS_snprintf(ptr, sizeof(ptr)/sizeof(tjs_char), TVPMdkGetText( NUM_MDK_ALREADY_REGISTERED ).c_str(), sign);
 			TVPAddLog( ptr );
 		}
 	} else {
 		tjs_char ptr[128];
-		TJS_snprintf(ptr, sizeof(ptr)/sizeof(tjs_char), TJS_W("'%c'は登録できない記号です。"), sign);
+		TJS_snprintf(ptr, sizeof(ptr)/sizeof(tjs_char), TVPMdkGetText( NUM_MDK_CANNOT_REGISTER_WORD ).c_str(), sign);
 		TVPAddLog( ptr );
 	}
 }
@@ -195,6 +195,16 @@ void Parser::ErrorLog( const tjs_char* message ) {
 	Log( LogType::Error, message );
 }
 //---------------------------------------------------------------------------
+void Parser::WarningLog( ttstr message, const ttstr& p1 ) {
+	message.Replace( TJS_W( "%1" ), p1 );
+	WarningLog( message.c_str() );
+}
+//---------------------------------------------------------------------------
+void Parser::ErrorLog( ttstr message, const ttstr& p1 ) {
+	message.Replace( TJS_W( "%1" ), p1 );
+	ErrorLog( message.c_str() );
+}
+//---------------------------------------------------------------------------
 void Parser::Log( LogType type, const tjs_char* message ) {
 	ttstr typemes;
 	if( type == LogType::Warning ) {
@@ -225,11 +235,11 @@ void Parser::PushAttribute( const tTJSVariantString* name, iTJSDispatch2* dic, b
 void Parser::PushAttribute( const tTJSVariantString* name, const tTJSVariant& value, bool isparameter ) {
 	if( isparameter ) {
 		if( CurrentTag->setParameter( name, value ) ) {
-			WarningLog( ( ttstr( *name ) + ttstr( TJS_W( " パラメータが二重に追加されています。" ) ) ).c_str() );
+			WarningLog( ( ttstr( *name ) + ttstr( TJS_W( " : " ) ) + TVPMdkGetText( NUM_MDK_PARAMETER_DUPLICATE ) ).c_str() );
 		}
 	} else {
 		if( CurrentTag->setAttribute( name, value ) ) {
-			WarningLog( ( ttstr( *name ) + ttstr( TJS_W( " 属性が二重に追加されています。" ) ) ).c_str() );
+			WarningLog( ( ttstr( *name ) + ttstr( TJS_W( " : " ) ) + TVPMdkGetText( NUM_MDK_ATTRIBUTE_DUPLICATE ) ).c_str() );
 		}
 	}
 }
@@ -276,7 +286,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 				if( token == Token::SYMBOL ) {
 					prop += ttstr( Lex->GetValue( value ).AsStringNoAddRef() );
 				} else {
-					ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定されたファイル属性の記述が間違っています。\".\"の後に文字列以外が来ています。")).c_str() );
+					ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_FILE_ATTRIBUTE_DOT ), ttstr( symbol.AsStringNoAddRef() ) );
 				}
 			}
 			Lex->Unlex( token, value );
@@ -284,7 +294,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 			tTJSVariant propvalue(prop);
 			PushAttributeFileProperty( *symbol.AsStringNoAddRef(), file, prop, isparameter );
 		} else {
-			ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定されたファイル属性の記述が間違っています。\"::\"の後に文字列以外が来ています。")).c_str() );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_FILE_ATTRIBUTE_DOUBLE_COLON ), ttstr( symbol.AsStringNoAddRef() ) );
 		}
 	} else if( token == Token::DOT ) {
 		// 参照かファイル属性のファイル名に拡張子が付いているかのどちらか
@@ -301,7 +311,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 				if( token == Token::SYMBOL ) {
 					name += ttstr( Lex->GetValue( value ).AsStringNoAddRef() );
 				} else {
-					ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定された参照の記述が間違っています。\".\"の後に文字列以外が来ています。")).c_str() );
+					ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_REFERENCE_DOT ), ttstr( symbol.AsStringNoAddRef() ) );
 				}
 			}
 			if( token == Token::DOUBLE_COLON ) {
@@ -316,7 +326,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 						if( token == Token::SYMBOL ) {
 							prop += ttstr( Lex->GetValue( value ).AsStringNoAddRef() );
 						} else {
-							ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定されたファイル属性の記述が間違っています。\".\"の後に文字列以外が来ています。")).c_str() );
+							ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_FILE_ATTRIBUTE_DOT ), ttstr( symbol.AsStringNoAddRef() ) );
 						}
 					}
 					Lex->Unlex( token, value );
@@ -324,7 +334,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 					tTJSVariant propvalue(prop);
 					PushAttributeFileProperty( *symbol.AsStringNoAddRef(), file, prop, isparameter );
 				} else {
-					ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定されたファイル属性の記述が間違っています。\"::\"の後に文字列以外が来ています。")).c_str() );
+					ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_FILE_ATTRIBUTE_DOUBLE_COLON ), ttstr( symbol.AsStringNoAddRef() ) );
 				}
 			} else {
 				// 参照だった
@@ -333,7 +343,7 @@ void Parser::ParseAttributeValueSymbol( const tTJSVariant& symbol, const tTJSVar
 				PushAttributeReference( *symbol.AsStringNoAddRef(), ref, isparameter );
 			}
 		} else {
-			ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に指定された参照の記述が間違っています。\"::\"の後に文字列以外が来ています。")).c_str() );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_REFERENCE_DOUBLE_COLON ), ttstr( symbol.AsStringNoAddRef() ) );
 		}
 	} else {
 		// . も :: もない場合は、変数参照であるとして登録する。
@@ -364,7 +374,7 @@ void Parser::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
 				const tTJSVariant& v = Lex->GetValue( v2 );
 				PushAttribute( symbol.AsStringNoAddRef(), v, isparameter );
 			} else {
-				ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に\"+\"数値以外が指定されました。数値として解釈できません。")).c_str() );
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_PLUS_NUMBER ), ttstr( symbol.AsStringNoAddRef() ) );
 			}
 			}
 			break;
@@ -376,7 +386,7 @@ void Parser::ParseAttribute( const tTJSVariant& symbol, bool isparameter ) {
 				m.changesign();
 				PushAttribute( symbol.AsStringNoAddRef(), m, isparameter );
 			} else {
-				ErrorLog( (ttstr(symbol.AsStringNoAddRef()) + TJS_W("の属性値に\"-\"数値以外が指定されました。数値として解釈できません。")).c_str() );
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_MINUS_NUMBER ), ttstr( symbol.AsStringNoAddRef() ) );
 			}
 			}
 			break;
@@ -413,11 +423,11 @@ bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 			const tTJSVariant& v = Lex->GetValue( value );
 			PushAttribute( GetRWord()->time(), v );
 		} else {
-			ErrorLog( TJS_W("タグ内で'<'の後数値以外が指定されています。") );
+			ErrorLog( TVPMdkGetText( NUM_MDK_NOT_NUMBER_AFTER_LTIN_TAG ).c_str() );
 		}
 		token = Lex->GetInTagToken( value );
 		if( token != Token::GT ) {
-			ErrorLog( TJS_W("タグ内で'<'の後'>'で閉じられていません。") );
+			ErrorLog( TVPMdkGetText( NUM_MDK_NOT_CLOSED_LTIN_TAG ).c_str() );
 		}
 		return true;
 
@@ -427,11 +437,11 @@ bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 			const tTJSVariant& v = Lex->GetValue( value );
 			PushAttribute( GetRWord()->wait(), v );
 		} else {
-			ErrorLog( TJS_W("タグ内で'{'の後数値以外が指定されています。") );
+			ErrorLog( TVPMdkGetText( NUM_MDK_NOT_NUMBER_AFTER_LBRACE_IN_TAG ).c_str() );
 		}
 		token = Lex->GetInTagToken( value );
 		if( token != Token::RBRACE ) {
-			ErrorLog( TJS_W("タグ内で'{'の後'}'で閉じられていません。") );
+			ErrorLog( TVPMdkGetText( NUM_MDK_NOT_CLOSED_LBRACE_IN_TAG ).c_str() );
 		}
 		return true;
 
@@ -441,11 +451,11 @@ bool Parser::ParseSpecialAttribute( Token token, tjs_int value ) {
 			const tTJSVariant& v = Lex->GetValue( value );
 			PushAttribute( GetRWord()->fade(), v );
 		} else {
-			ErrorLog( TJS_W("タグ内で'('の後数値以外が指定されています。") );
+			ErrorLog( TVPMdkGetText( NUM_MDK_NOT_NUMBER_AFTER_LPARENTHESIS_IN_TAG ).c_str() );
 		}
 		token = Lex->GetInTagToken( value );
 		if( token != Token::RPARENTHESIS ) {
-			ErrorLog( TJS_W("タグ内で'('の後')'で閉じられていません。") );
+			ErrorLog( TVPMdkGetText( NUM_MDK_NOT_CLOSED_LPARENTHESIS_IN_TAG ).c_str() );
 		}
 		return true;
 
@@ -559,13 +569,13 @@ void Parser::ParseAttributes() {
 			if( token == Token::SYMBOL ) {
 				ParseAttribute( Lex->GetValue(value), true );
 			} else {
-				ErrorLog( TJS_W("タグ内で$の後にパラメータ名として解釈できない文字が用いられました。") );
+				ErrorLog( TVPMdkGetText( NUM_MDK_PARAMETER_PARSE_ERROR_IN_TAG ).c_str() );
 			}
 			break;
 
 		case Token::RBRACKET:	// ] タグ終了
 			if( TextAttribute ) {
-				ErrorLog( TJS_W( "文字装飾が']'で閉じられています。" ) );
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_CHAR_DECORATION ).c_str() );
 			}
 			MultiLineTag = false;
 			intag = false;
@@ -576,7 +586,7 @@ void Parser::ParseAttributes() {
 				MultiLineTag = false;
 				intag = false;
 			} else {
-				ErrorLog( TJS_W( "タグ内で解釈できない記号が用いられました。" ) );
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_SYMBOL_IN_TAG ).c_str() );
 			}
 			break;
 
@@ -591,7 +601,7 @@ void Parser::ParseAttributes() {
 
 		default:
 			if( !ParseSpecialAttribute( token, value ) ) {
-				ErrorLog( TJS_W("タグ内で解釈できない記号が用いられました。") );
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_SYMBOL_IN_TAG ).c_str() );
 			}
 			break;
 		}
@@ -657,7 +667,7 @@ void Parser::ParseCharacter() {
 		LineAttribute = true;
 		ParseAttributes();
 	} else {
-		ErrorLog( TJS_W("@の後に名前として解釈できない文字が指定されています。") );
+		ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_CHARACTOR_IN_NAME ).c_str() );
 	}
 
 	Scenario->setTag( *CurrentTag.get() );
@@ -686,7 +696,7 @@ void Parser::ParseLabel() {
 		}
 		
 	} else {
-		ErrorLog( TJS_W("#の後にラベル名として解釈できない文字が指定されています。") );
+		ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_CHARACTOR_IN_LABEL ).c_str() );
 	}
 
 	Scenario->setTag( *CurrentTag.get() );
@@ -716,7 +726,7 @@ void Parser::ParseSelect( tjs_int number ) {
 		PushAttribute( GetRWord()->text(), v );
 		token = Lex->GetInTagToken( value );
 		if( token != Token::VERTLINE ) {
-			ErrorLog( TJS_W("選択肢で*の後に|がありません。") );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_SELECTOR_SYNTAX ).c_str() );
 		}
 	} else if( token == Token::VERTLINE ) {
 		// | の時は、次の|までを画像ファイル名として読み込む
@@ -776,10 +786,10 @@ void Parser::ParseNextScenario() {
 				tTJSVariant v( cond );
 				PushAttribute( GetRWord()->cond(), v );
 			} else {
-				ErrorLog( TJS_W(">の後のifに続く条件式がありません。") );
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_NEXT_CONDITION ).c_str() );
 			}
 		} else {
-			ErrorLog( (ttstr(TJS_W( ">の後に認識できない文字列があります : " )) + ttstr( Lex->GetString( text ) )).c_str() );
+			ErrorLog( (TVPMdkGetText( NUM_MDK_INVALID_TEXT_IN_NEXT_COMMAND ) + ttstr( Lex->GetString( text ) )).c_str() );
 		}
 	}
 
@@ -824,10 +834,10 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 				Tag tag( GetRWord()->endruby() );
 				Scenario->addTagToCurrentLine( tag );
 			} else {
-				ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_RUBY_SYNTAX ).c_str() );
 			}
 		} else {
-			ErrorLog( TJS_W( "'《'の後に'》'がないため、ルビとして解釈できません。" ) );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_REGISTER_RUBY_SYNTAX ).c_str() );
 		}
 		return true;
 	}
@@ -842,7 +852,7 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 			Tag tag( GetRWord()->endruby() );
 			Scenario->addTagToCurrentLine( tag );
 		} else {
-			ErrorLog( TJS_W( "《の前に|がないため、ルビとして解釈できません。" ) );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_RUBY_SYNTAX ).c_str() );
 		}
 		return true;
 	}
@@ -862,7 +872,7 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 			Tag tag( GetRWord()->endtextstyle() );
 			Scenario->addTagToCurrentLine( tag );
 		} else {
-			ErrorLog( TJS_W( "'{'の前に'|'がないため、文字装飾として解釈できません。" ) );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_CHARACTOR_DECORATION_SYNTAX ).c_str() );
 		}
 		return true;
 	}
@@ -880,7 +890,7 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 			tag.setAttribute( GetRWord()->storage(), Lex->GetValue( text ) );
 			Scenario->addTagToCurrentLine( tag );
 		} else {
-			ErrorLog( TJS_W( "':('の後に画像名がないか、')'がありません。" ) );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_INLINE_GRAPHICS_SYNTAX ).c_str() );
 		}
 		return true;
 	}
@@ -891,13 +901,13 @@ bool Parser::ParseTag( Token token, tjs_int value ) {
 			tag.setAttribute( GetRWord()->storage(), Lex->GetValue( text ) );
 			Scenario->addTagToCurrentLine( tag );
 		} else {
-			ErrorLog( TJS_W( "':'の後に絵文字名がないか、':'がありません。" ) );
+			ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_EMOJI_SYNTAX ).c_str() );
 		}
 		return true;
 	}
 
 	default:
-		ErrorLog( TJS_W("不明な文法です。") );
+		ErrorLog( TVPMdkGetText( NUM_MDK_UNKNOWN_SYNTAX ).c_str() );
 		return false;
 	}
 }
@@ -1110,7 +1120,7 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 		ParseLine( CurrentLine );
 	}
 	if( MultiLineTag ) {
-		ErrorLog( TJS_W( "タグが閉じられずにファイル末尾まで到達しました。" ) );
+		ErrorLog( TVPMdkGetText( NUM_MDK_UNTARMINATED_TAG ).c_str() );
 	}
 
 	// コンパイルエラーがあった場合は例外を発生させる。
