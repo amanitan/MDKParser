@@ -1121,7 +1121,7 @@ Token LexicalAnalyzer::GetFirstToken(tjs_int &n) {
 			return Token::SELECT;
 		} else {
 			// 選択肢ではない通常の文字列
-			Block->WarningLog( TJS_W("行頭に数値が用いられましたが、'.'がないため選択肢として解釈されませんでした。") );
+			Block->WarningLog( TVPMdkGetText( NUM_MDK_SELECTOR_PARSE_ERROR ).c_str() );
 			return GetTextToken(n);
 		}
 	}
