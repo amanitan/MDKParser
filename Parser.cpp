@@ -736,6 +736,10 @@ void Parser::ParseSelect( tjs_int number ) {
 			tjs_string imagefile = Trim( str );
 			tTJSVariant val( imagefile.c_str() );
 			PushAttribute( GetRWord()->image(), val );
+			Token token = Lex->GetInTagToken( value );
+			if( token != Token::VERTLINE ) {
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_SELECTOR_SYNTAX ).c_str() );
+			}
 		}
 	} else {
 		// それ以外の時は、|までを表示するテキストとして解釈する
@@ -743,6 +747,10 @@ void Parser::ParseSelect( tjs_int number ) {
 		tjs_int text = Lex->ReadToVerline();
 		if( text >= 0 ) {
 			PushAttribute( GetRWord()->text(), Lex->GetValue( text ) );
+			Token token = Lex->GetInTagToken( value );
+			if( token != Token::VERTLINE ) {
+				ErrorLog( TVPMdkGetText( NUM_MDK_INVALID_SELECTOR_SYNTAX ).c_str() );
+			}
 		}
 	}
 	tjs_int text = Lex->ReadToVerline();
