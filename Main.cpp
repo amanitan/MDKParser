@@ -47,7 +47,7 @@ iTJSDispatch2 * TVPCreateNativeClass_MDKParser() {
 		if( result ) {
 			iTJSDispatch2* ret = _this->ParseMDKScenario( *param[0] );
 			*result = tTJSVariant( ret, ret );
-			ret->Release();
+			if( ret ) ret->Release();
 		}
 		return TJS_S_OK;
 	}

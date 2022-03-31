@@ -168,6 +168,8 @@ private:
 	void ParseLine( tjs_int line );
 
 	ttstr* GetTagSignWord( Token token );
+
+	iTJSDispatch2* CreateEmptyScenario();
 public:
 	iTJSDispatch2* ParseText( const tjs_char* text );
 };

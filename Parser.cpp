@@ -1069,6 +1069,20 @@ void Parser::ParseLine( tjs_int line ) {
 }
 //---------------------------------------------------------------------------
 /**
+ * 空のシナリオの場合の結果を返す
+ */
+iTJSDispatch2* Parser::CreateEmptyScenario() {
+	iTJSDispatch2* retDic = TJSCreateDictionaryObject();
+	if( retDic ) {
+		iTJSDispatch2* ar = TJSCreateArrayObject();
+		tTJSVariant tmp( ar, ar );
+		retDic->PropSetByVS( TJS_MEMBERENSURE, GetRWord()->lines(), &tmp, retDic );
+		ar->Release();
+	}
+	return retDic;
+}
+//---------------------------------------------------------------------------
+/**
  * 引数で渡された文字列を解析して、文字列として返す。
  */
 iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
@@ -1076,8 +1090,8 @@ iTJSDispatch2* Parser::ParseText( const tjs_char* text ) {
 
 	// compiles text and executes its global level scripts.
 	// the script will be compiled as an expression if isexpressn is true.
-	if( !text ) return nullptr;
-	if( !text[0] ) return nullptr;
+	if( !text ) return CreateEmptyScenario();
+	if( !text[0] ) return CreateEmptyScenario();
 
 	TJS_D( ( TJS_W( "Counting lines ...\n" ) ) )
 
